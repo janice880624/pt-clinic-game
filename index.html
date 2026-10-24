@@ -369,8 +369,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 <script>
 /* ================= 內容設定（給物理治療師改這裡） ================= */
 // 速度：現實幾秒 = 遊戲 1 分鐘（右上角可切換）
-// 標準速度下一診約 11–13 分鐘
-const SPEEDS = [ { name:'慢', sec:4.6 }, { name:'標準', sec:3.8 }, { name:'快', sec:2.8 } ];
+// 標準速度：現實 1 秒 = 遊戲 1 分鐘
+const SPEEDS = [ { name:'慢', sec:1.4 }, { name:'標準', sec:1 }, { name:'快', sec:0.7 } ];
 let speedIdx = 1;
 try { const v = +localStorage.getItem('ptSpeed'); if (SPEEDS[v]) speedIdx = v; } catch (e) {}
 
@@ -382,13 +382,13 @@ const SHIFTS = {
 
 // 治療項目：dur = 治療分鐘；setup = 你擺位要花的分鐘；back = 擺位對腰的負擔
 const MODS = {
-  heat:  { name:'熱敷',     short:'熱敷',   dur:15, setup:0.4, back:0.8, color:'var(--heat)',  order:1, verb:'包熱敷包' },
-  ice:   { name:'冰敷',     short:'冰敷',   dur:15, setup:0.4, back:0.6, color:'var(--ice)',   order:1, verb:'敷冰袋' },
-  sw:    { name:'短波',     short:'短波',   dur:15, setup:0.4, back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
-  estim: { name:'電療',     short:'電療',   dur:15, setup:0.4, back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
-  tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:0.6, back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
-  tracC: { name:'頸椎牽引', short:'拉脖子', dur:15, setup:0.5, back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
-  laser: { name:'雷射',     short:'雷射',   dur:5,  setup:0.25, back:0.2, color:'var(--laser)', order:5, verb:'對準雷射' },
+  heat:  { name:'熱敷',     short:'熱敷',   dur:15, setup:1,   back:0.8, color:'var(--heat)',  order:1, verb:'包熱敷包' },
+  ice:   { name:'冰敷',     short:'冰敷',   dur:15, setup:1,   back:0.6, color:'var(--ice)',   order:1, verb:'敷冰袋' },
+  sw:    { name:'短波',     short:'短波',   dur:15, setup:1,   back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
+  estim: { name:'電療',     short:'電療',   dur:15, setup:1,   back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
+  tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:1.5, back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
+  tracC: { name:'頸椎牽引', short:'拉脖子', dur:15, setup:1,   back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
+  laser: { name:'雷射',     short:'雷射',   dur:5,  setup:0.5, back:0.2, color:'var(--laser)', order:5, verb:'對準雷射' },
 };
 
 // 治療室分區：n = 床位數；cols = 每排幾個；row = 放上排(1)或下排(2)
@@ -464,8 +464,8 @@ const EVENTS = [
     { t:'立刻停止牽引，觀察症狀並回報醫師', fx:{score:14,throat:5,stamina:-3}, fb:'症狀變化時先停止、評估並通報，是牽引的安全原則。', good:true },
   ]},
   { id:'eyes', who:'雷射區的阿姨', say:'「這個紅紅的光，可以順便照一下眼睛保養嗎？」', when:running('laser'), choices:[
-    { t:'「照一下應該沒差啦」', fx:{score:-15,incident:1}, fb:'雷射不可以直射眼睛，治療時也要注意護目。' },
-    { t:'不行，雷射不能照眼睛，請她戴好護目鏡', fx:{score:12,throat:4}, fb:'護目是雷射治療的基本安全措施。', good:true },
+    { t:'「照一下應該沒差啦」', fx:{score:-15,incident:1}, fb:'雷射光不可以直射眼睛，只能照在治療部位。' },
+    { t:'不行，雷射不能對著眼睛照，探頭只對準治療部位', fx:{score:12,throat:4}, fb:'照射時探頭貼近、對準治療部位，不朝眼睛方向照。', good:true },
   ]},
   { id:'phone', who:'短波區的大哥', say:'「我手機放口袋邊做邊滑可以嗎？」', when:running('sw'), choices:[
     { t:'「可以啊，不要掉下去就好」', fx:{score:-10,incident:1}, fb:'短波治療時手機、手錶等金屬物品要移開治療區域。' },
@@ -668,7 +668,7 @@ function completeStep(st){
   if (st.m === 'heat' && st.p.sleepy && !st.p.woke){
     const q = st.p; q.woke = true;
     msg(`${q.name} 在熱敷床上睡到打呼……`, 'bad');
-    setLock(`輕輕叫醒睡著的${q.name}`, 0.5, () => completeStep(st));
+    setLock(`輕輕叫醒睡著的${q.name}`, 1, () => completeStep(st));
     return;
   }
   const p = st.p, late = st.doneAt != null ? S.t - st.doneAt : 0;
