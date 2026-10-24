@@ -136,6 +136,11 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .unit.broken .furn{border-color:var(--bad);background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--bad) 14%,var(--bed)) 0 6px,var(--bed) 6px 12px)}
 .unit.broken .tm,.unit.broken .nm{color:var(--bad);font-weight:700}
 .unit.broken .lamp{background:var(--bad)}
+.unit.fault .furn{border:2px solid var(--warn);animation:warnbeep .7s steps(2,jump-none) infinite}
+.unit.fault .tm{color:var(--warn);font-weight:700}
+.unit.fault .lamp{background:var(--warn);animation:blink .5s steps(2,jump-none) infinite}
+@keyframes warnbeep{0%{box-shadow:0 2px 0 var(--line)}100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 55%,transparent)}}
+@media (prefers-reduced-motion:reduce){.unit.fault .furn,.unit.fault .lamp{animation:none}}
 .unit.nopower .furn{opacity:.5;filter:grayscale(.7)}
 .unit.nopower .tm{color:var(--warn);font-weight:700}
 .unit.nopower .lamp{background:var(--line)}
@@ -422,9 +427,9 @@ let speedIdx = 1;
 try { const v = +localStorage.getItem('ptSpeed'); if (SPEEDS[v]) speedIdx = v; } catch (e) {}
 
 const SHIFTS = {
-  am:  { name:'早診', start:510,  len:210, gap:[3,6],   desc:'阿公阿嬤一開門就在排了' },
-  pm:  { name:'午診', start:840,  len:210, gap:[5,9],   desc:'看起來很閒……千萬別說出口' },
-  eve: { name:'晚診', start:1080, len:180, gap:[2.5,5], desc:'下班族和學生一起湧進來' },
+  am:  { name:'早診', start:510,  len:210, gap:[3.6,6.6], desc:'阿公阿嬤一開門就在排了' },
+  pm:  { name:'午診', start:840,  len:210, gap:[6.2,10.6], desc:'看起來很閒……千萬別說出口' },
+  eve: { name:'晚診', start:1080, len:180, gap:[2.9,5.5], desc:'下班族和學生一起湧進來' },
 };
 
 // 治療項目：dur = 治療分鐘；setup = 你擺位要花的分鐘；back = 擺位對腰的負擔
@@ -635,7 +640,7 @@ function newGame(key){
   S = { key, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{},
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
-    nextArr: sh.start + rand(2,4), nextEvt: sh.start + rand(16,28), nextInc: sh.start + rand(30,45), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
+    nextArr: sh.start + rand(2,4), nextEvt: sh.start + rand(16,28), nextInc: sh.start + rand(30,45), nextFault: sh.start + rand(14,22), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
   spawn(); spawn(); if (key === 'am') spawn();
@@ -817,7 +822,7 @@ function completeStep(st){
   p.done.push(st.m);
   afterMod(st, p);
 }
-function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; }
+function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; }
 function afterMod(st, p){
   const bi = S.st.indexOf(st);
   clearSt(st);
@@ -909,6 +914,7 @@ function step(g){
     else { S.score -= 10*S.inspectHits; msg(`主任巡完了，記下 ${S.inspectHits} 台機器嗶太久。`, 'bad'); }
   }
   if (S.t >= S.nextInc && !modal && S.t < S.end + 20){ fireIncident(); S.nextInc = S.t + rand(26, 42); }
+  if (S.t >= S.nextFault && !modal){ fireFault(); S.nextFault = S.t + rand(14, 24); }
   if (S.t < S.end && S.t >= S.nextArr && S.deskDownUntil){
     S.deskBacklog++;
     S.nextArr = S.t + rand(...S.sh.gap);
@@ -930,7 +936,11 @@ function step(g){
   for (const st of S.st){
     if (!st.p || !st.on) continue;
     if (MODS[st.m].hands) continue;
-    if (st.doneAt == null && (st.broken || (!S.power && ELECTRIC[st.m]))){ st.start += g; continue; }
+    if (st.doneAt == null && (st.broken || st.fault || (!S.power && ELECTRIC[st.m]))){
+      st.start += g;
+      if (st.fault && !st.faultWarn && S.t - st.faultAt > 4){ st.faultWarn = true; S.score -= 10; msg(`${st.p.name}：「欸～${st.fault === 'pad' ? '貼片' : '探頭'}掉很久了耶，還要做多久？」`, 'bad'); }
+      continue;
+    }
     if (st.doneAt == null && S.t >= st.start + st.dur) st.doneAt = st.start + st.dur;
     if (S.inspectUntil && st.doneAt != null && !st.insp && S.t - st.doneAt > 1.5){ st.insp = true; S.inspectHits++; msg(`主任皺著眉看${st.label}一直嗶……`, 'bad'); }
     if (st.doneAt != null && !st.ot){
@@ -951,6 +961,22 @@ function step(g){
 }
 
 let alertTimer = null;
+// 小突發：電療貼片掉了、雷射探頭滑掉
+function fireFault(){
+  const c = S.st.filter(s => s.p && s.on && s.doneAt == null && S.t >= s.start && (s.m === 'estim' || s.m === 'laser') && !s.fault && !s.broken && (S.power || !ELECTRIC[s.m]));
+  if (!c.length) return;
+  const st = c[Math.floor(Math.random()*c.length)];
+  st.fault = st.m === 'estim' ? 'pad' : 'probe'; st.faultAt = S.t; st.faultWarn = false;
+  const title = st.fault === 'pad' ? '電療貼片掉了' : '雷射探頭滑掉了';
+  const d = st.fault === 'pad'
+    ? `${st.label}的${st.p.name}一翻身，電極片掉下來了，機器停住。點床位幫他重新貼好`
+    : `${st.label}的探頭從${st.p.name}身上滑開了，照射暫停。點床位重新對準固定`;
+  $('alertT').textContent = title; $('alertD').textContent = d;
+  const a = $('alert'); a.hidden = true; void a.offsetWidth; a.hidden = false;
+  clearTimeout(alertTimer); alertTimer = setTimeout(() => { a.hidden = true; }, 2600);
+  msg(`突發狀況：${title}！`, 'bad');
+}
+
 function fireIncident(){
   const pool = INCIDENTS.filter(x => x.ok());
   if (!pool.length) return;
@@ -1110,7 +1136,8 @@ function renderRoom(){
       }
     }
     if (p && st.on && st.m === 'heat' && p.sleepy && !p.woke && state === 'run' && pct > 0.4) tm = `呼嚕zzz ${tm}`;
-    if (st.broken){ state += ' broken'; tm = '故障・點我修'; if (!p) nm = '故障'; }
+    if (st.fault && p){ state = 'fault'; tm = st.fault === 'pad' ? '貼片掉了！點我' : '探頭掉了！點我'; }
+    else if (st.broken){ state += ' broken'; tm = '故障・點我修'; if (!p) nm = '故障'; }
     else if (!S.power && ELECTRIC[st.m] && !(p && st.doneAt != null)){ state += ' nopower'; tm = '跳電'; }
     else if (st.m === 'heat' && S.heatLow && !p){ state = 'idle refill'; nm = '水位低'; tm = '點我補水'; }
     const walking = p && st.walkUntil > NOW;
@@ -1221,6 +1248,7 @@ function render(){
   const inc = [];
   if (!S.power) inc.push(['跳電', '']);
   const nb = S.st.filter(s => s.broken).length; if (nb) inc.push([`${nb} 台故障`, '']);
+  const nf = S.st.filter(s => s.fault).length; if (nf) inc.push([`${nf} 床要重貼`, 'warn']);
   if (S.heatLow) inc.push(['熱敷箱水位低', 'warn']);
   if (S.inspectUntil) inc.push([`主任巡房 ${Math.ceil(S.inspectUntil - S.t)} 分`, 'warn']);
   if (S.deskDownUntil) inc.push([`櫃台當機 ${Math.ceil(S.deskDownUntil - S.t)} 分`, 'warn']);
@@ -1241,6 +1269,14 @@ function busy(){ msg(`你正在${S.lock.label}，分身乏術！`, 'bad'); }
 $('room').addEventListener('click', e => {
   const el = e.target.closest('.unit'); if (!el || !S || S.over) return;
   const st = S.st[+el.dataset.i];
+  if (st.fault && st.p){
+    if (S.lock) return busy();
+    const q = st.p, pad = st.fault === 'pad';
+    return setLock(pad ? `幫${q.name}重新貼電極片` : `幫${q.name}重新對準雷射探頭`, 0.4, () => {
+      st.fault = null; st.faultWarn = false; S.score += 3;
+      msg(pad ? `${q.name}的電極片貼好了，繼續電療。` : `${q.name}的雷射探頭固定好了，繼續照射。`, 'good');
+    });
+  }
   if (st.broken){
     if (S.lock) return busy();
     return setLock(`修理${st.label}`, 2, () => { st.broken = false; S.score += 5; msg(`${st.label}修好了，又能用了。`, 'good'); });
