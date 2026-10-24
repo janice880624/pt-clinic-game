@@ -20,6 +20,7 @@
   --brand:#0D7175; --brand-ink:#FFFFFF;
   --heat:#D2621F; --ice:#1597B5; --estim:#2860CF; --trac:#7646C0; --neck:#9A4FB8; --laser:#C02E74; --sw:#8C6A0E; --us:#4B8F2A;
   --good:#1F8A5A; --warn:#B87E0C; --bad:#C7362F;
+  --led-bg:#1C2321; --led:#FF6A3D; --led-dim:#8C9C98;
   --shadow:0 1px 0 rgba(27,42,48,.05),0 8px 20px -14px rgba(27,42,48,.35);
   --f-disp:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
   --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
@@ -171,8 +172,25 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .lobby .room-sign{left:10px}
 .lobby-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .lobby-top small{font-size:11px;color:var(--muted)}
-.desk{border:2px solid var(--wall);border-radius:5px;background:var(--panel);padding:1px 8px;font-size:11px;color:var(--muted);white-space:nowrap}
-.desk b{font-family:var(--f-disp);font-weight:400;color:var(--ink);margin-right:4px}
+.callboard{display:flex;align-items:baseline;gap:3px;background:var(--led-bg);border:2px solid var(--wall);border-radius:5px;padding:1px 8px;white-space:nowrap;color:var(--led-dim);font-size:10px;min-width:0}
+.callboard b{font-family:var(--f-mono);font-weight:600;font-size:16px;color:var(--led);letter-spacing:.06em;line-height:1.25}
+#callTo{color:var(--led);font-size:11px;font-weight:700;margin-left:3px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+.callboard.flash{animation:callflash .45s steps(2,jump-none) 4}
+@keyframes callflash{0%{box-shadow:0 0 0 0 transparent}100%{box-shadow:0 0 0 3px var(--led)}}
+.walkers{position:absolute;inset:0;pointer-events:none;z-index:12}
+.walker{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px}
+.walker .wav{display:block;width:34px;height:34px;border-radius:50%;overflow:hidden;background:var(--avbg);border:2.5px solid var(--brand);box-sizing:border-box;
+  box-shadow:0 5px 8px -3px rgba(0,0,0,.4);animation:bob .26s ease-in-out infinite alternate}
+.walker .wav svg{display:block;width:100%;height:100%}
+.walker em{position:absolute;left:50%;top:35px;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:700;white-space:nowrap;
+  background:var(--brand);color:var(--brand-ink);border-radius:4px;padding:0 4px;line-height:1.5}
+.walker.out .wav{border-color:var(--good)} .walker.out em{background:var(--good)}
+.walker.angry .wav{border-color:var(--bad)} .walker.angry em{background:var(--bad)}
+@keyframes bob{from{transform:translateY(0) rotate(-5deg)}to{transform:translateY(-4px) rotate(5deg)}}
+.seat.incoming .av{opacity:.15}
+.seat.incoming .sn{opacity:.5}
+.foot a{color:var(--brand)}
+@media (prefers-reduced-motion:reduce){.walker .wav,.callboard.flash{animation:none}}
 .seats{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px 4px;align-content:start;padding-top:4px}
 .seat{display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:0;padding:0;cursor:pointer;min-width:0}
 .ring{position:relative;width:42px;height:42px;border-radius:50%;padding:3px;box-sizing:border-box;background:conic-gradient(var(--pc,var(--good)) calc(var(--p,100)*1%),var(--line) 0)}
@@ -298,9 +316,9 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
     <aside class="side">
       <div class="lobby">
         <span class="room-sign">候診區</span>
-        <div class="lobby-top"><small id="qCount">0 人候診</small><span class="desk"><b>櫃台</b>掛號・批價</span></div>
+        <div class="lobby-top"><small id="qCount">0 人候診</small><span class="callboard" id="callboard"><small>請</small><b id="callNo">---</b><small>號</small><span id="callTo">治療室</span></span></div>
         <div class="seats" id="seats"></div>
-        <span class="door"></span>
+        <span class="door" id="door"></span>
       </div>
       <div class="rxcard hint" id="rxcard">點候診的病人看處方。</div>
       <div class="actions">
@@ -311,6 +329,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
     </aside>
   </div>
 
+  <div class="walkers" id="walkers"></div>
   <div class="picker" id="picker" hidden><div class="ph"><b id="pkName"></b><br>下一個去哪？</div><div class="pk" id="pkOpts"></div></div>
 
   <div class="ov" id="startOv">
@@ -320,7 +339,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         <h1 class="title">不要說<br>今天<span class="pine">很閒</span></h1>
         <p class="lede">27 台機器同時在嗶，每個病人的處方都不一樣，而你只有一個人。撐過這一診，準時下班。</p>
         <div class="legend" id="legend"></div>
-        <p class="foot">非商業作品，僅供教育推廣與交流分享，請勿用於任何商業用途。<br>遊戲中的情境、治療參數與處置皆為練習用的簡化設定，實際臨床請依醫囑及所屬院所規範執行。<br>© Janice 製作</p>
+        <p class="foot">非商業作品，僅供教育推廣與交流分享，請勿用於任何商業用途。<br>遊戲中的情境、治療參數與處置皆為練習用的簡化設定，實際臨床請依醫囑及所屬院所規範執行。<br>© Janice 製作・採用 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" target="_blank" rel="noopener">CC BY-NC 4.0</a> 授權・靈感來自護理師值班遊戲〈<a href="https://busy-nurse.vercel.app/" target="_blank" rel="noopener">上班不要吃鳳梨</a>〉</p>
       </div>
       <div class="col">
         <div class="shifts" id="shifts"></div>
@@ -598,10 +617,11 @@ let PID = 0; // 病人編號全域遞增，避免換局後畫面沿用舊病人
 let S = null, unitEls = [], zoneEls = [], modal = null, pendingEv = [], lastShift = 'am';
 
 function newGame(key){
+  $('walkers').innerHTML = ''; $('callNo').textContent = '---'; $('callTo').textContent = '治療室';
   lastShift = key; pendingEv = []; modal = null;
   const sh = SHIFTS[key];
   S = { key, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
-    st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, toiletRush:0, warned:{},
+    st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{},
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
     nextArr: sh.start + rand(2,4), nextEvt: sh.start + rand(16,28), nextInc: sh.start + rand(30,45), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
@@ -652,7 +672,7 @@ function spawn(urgent, front, opts){
     pm: !urgent && (p.rx.includes('estim') || p.rx.includes('sw')) && Math.random() < 0.06,
     metal: !urgent && p.rx.includes('sw') && Math.random() < metal, asked:{},
     sleepy: !urgent && p.rx.includes('heat') && Math.random() < 0.15, woke:false });
-  S.arrived++;
+  S.arrived++; p.no = ++S.ticket; p.arriving = true; p.atBed = null; p.walkInUntil = 0;
   front ? S.queue.unshift(p) : S.queue.push(p);
 }
 
@@ -663,9 +683,49 @@ function usable(st){ return !st.broken && !(st.m === 'heat' && S.heatLow) && !(!
 function valid(st, p){ return !st.p && usable(st) && canDo(p, st.m); }
 
 function assign(st, p){
+  const i = S.st.indexOf(st);
+  const from = p.atBed != null ? bedPt(p.atBed) : (seatPt(p) || doorPt());
+  p.atBed = null;
   S.queue = S.queue.filter(q => q !== p);
   S.sel = null; S.peek = p;
   startMod(st, p);
+  callNumber(p, st);
+  st.walkUntil = performance.now() + walk(p, from, bedPt(i));
+}
+
+/* ---------- 走路動畫與叫號 ---------- */
+const REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function toStage(r, fx, fy){
+  const st = $('stage').getBoundingClientRect(), sc = st.width / 960;
+  return { x:(r.left + r.width*fx - st.left)/sc, y:(r.top + r.height*fy - st.top)/sc };
+}
+function bedPt(i){ const f = unitEls[i] && unitEls[i].querySelector('.furn'); if (!f) return null; const pt = toStage(f.getBoundingClientRect(), .5, .09); pt.y += 18; return pt; }
+function seatPt(p){ const el = document.querySelector(`.seat[data-id="${p.id}"] .ring`); return el ? toStage(el.getBoundingClientRect(), .5, .5) : null; }
+function doorPt(){ const pt = toStage($('door').getBoundingClientRect(), .5, .5); pt.y -= 16; return pt; }
+function walk(p, from, to, opts = {}){
+  if (!from || !to || REDUCE) return 0;
+  const ms = clamp(Math.hypot(to.x - from.x, to.y - from.y) * 2.4, 450, 1500);
+  const w = document.createElement('div');
+  w.className = 'walker' + (opts.cls ? ' ' + opts.cls : '');
+  w.innerHTML = `<span class="wav">${p.svg}</span><em>${opts.tag || (p.no + ' 號')}</em>`;
+  w.style.left = from.x + 'px'; w.style.top = from.y + 'px';
+  $('walkers').appendChild(w);
+  void w.offsetWidth;
+  w.style.transition = `left ${ms}ms linear, top ${ms}ms linear`;
+  w.style.left = to.x + 'px'; w.style.top = to.y + 'px';
+  setTimeout(() => w.remove(), ms + 40);
+  return ms;
+}
+function walkBack(p){
+  const i = p.atBed; p.atBed = null;
+  if (i == null) return;
+  p.walkInUntil = performance.now() + walk(p, bedPt(i), seatPt(p));
+}
+function callNumber(p, st){
+  $('callNo').textContent = String(p.no).padStart(3, '0');
+  $('callTo').textContent = st.label;
+  const cb = $('callboard'); cb.classList.remove('flash'); void cb.offsetWidth; cb.classList.add('flash');
+  Music.ding();
 }
 function startMod(st, p){
   st.p = p; st.on = false; st.doneAt = null; st.ot = false;
@@ -699,10 +759,12 @@ function completeStep(st){
   p.done.push(st.m);
   afterMod(st, p);
 }
-function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; }
+function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; }
 function afterMod(st, p){
+  const bi = S.st.indexOf(st);
   clearSt(st);
   if (!p.rem.length){
+    walk(p, bedPt(bi), doorPt(), { cls:'out', tag:'批價' });
     S.served++; S.score += 20 + 5*p.done.length;
     if (S.peek === p) S.peek = null;
     msg(`${p.name} 治療完成，去櫃台批價了。`, 'good'); return;
@@ -710,8 +772,8 @@ function afterMod(st, p){
   // 由玩家決定下一站：病人先站到候診區最前面並被選取，跳出選單
   p.patience = Math.max(p.patience, 75);
   S.queue.unshift(p);
-  S.sel = p.id; S.peek = null;
-  openPicker(p, S.st.indexOf(st));
+  S.sel = p.id; S.peek = null; p.atBed = bi;
+  openPicker(p, bi);
   msg(`${p.name} 這項做完了，還要做：${p.rem.map(m => MODS[m].short).join('、')}。下一個去哪？`);
 }
 
@@ -730,7 +792,10 @@ function openPicker(p, i){
   y = clamp(y, 54, 530 - pk.offsetHeight);
   pk.style.left = x + 'px'; pk.style.top = y + 'px';
 }
-function closePicker(){ PK = null; $('picker').hidden = true; }
+function closePicker(){
+  if (PK && S && S.queue.includes(PK.p) && PK.p.atBed != null) walkBack(PK.p);
+  PK = null; $('picker').hidden = true;
+}
 function renderPicker(force){
   if (!PK) return;
   const p = PK.p;
@@ -753,8 +818,8 @@ $('pkOpts').addEventListener('click', e => {
   if (S.lock) return busy();
   const free = S.st.find(s => s.m === m && !s.p && usable(s));
   if (!free) return renderPicker(true);
-  closePicker();
   assign(free, p);
+  closePicker();
   msg(`${p.name} 走去${free.label}。`);
 });
 
@@ -797,6 +862,7 @@ function step(g){
   for (const p of [...S.queue]){
     p.patience -= g * (100 / p.patMax);
     if (p.patience <= 0){
+      walk(p, p.atBed != null ? bedPt(p.atBed) : seatPt(p), doorPt(), { cls:'angry', tag:'客訴' });
       S.queue = S.queue.filter(q => q !== p);
       if (S.sel === p.id) S.sel = null;
       S.complaints++; S.score -= 25;
@@ -962,7 +1028,9 @@ function buildRoom(){
 
 function setText(el, v){ if (el.textContent !== v) el.textContent = v; }
 
+let NOW = 0;
 function renderRoom(){
+  NOW = performance.now();
   const selP = S.queue.find(p => p.id === S.sel);
   S.st.forEach((st, i) => {
     const el = unitEls[i], p = st.p;
@@ -986,11 +1054,15 @@ function renderRoom(){
     if (st.broken){ state += ' broken'; tm = '故障・點我修'; if (!p) nm = '故障'; }
     else if (!S.power && ELECTRIC[st.m] && !(p && st.doneAt != null)){ state += ' nopower'; tm = '跳電'; }
     else if (st.m === 'heat' && S.heatLow && !p){ state = 'idle refill'; nm = '水位低'; tm = '點我補水'; }
+    const walking = p && st.walkUntil > NOW;
+    if (walking) tm = '走過來中…';
     if (p && S.peek === p) state += ' peek';
     const cls = el._base + ' ' + state;
     if (el.className !== cls) el.className = cls;
     const pid = p ? p.id : 0;
-    if (el._pid !== pid){ el._pid = pid; el._tok.hidden = !p; el._tok.innerHTML = p ? p.svg : ''; }
+    if (el._pid !== pid){ el._pid = pid; el._tok.innerHTML = p ? p.svg : ''; }
+    const showTok = !!p && !walking;
+    if (el._tok.hidden === showTok) el._tok.hidden = !showTok;
     setText(el._nm, nm); setText(el._tm, tm || ' ');
     el.title = p ? `${st.label}：${p.name}（${p.dx}）` : st.label;
     el._bar.style.width = (pct*100).toFixed(1) + '%';
@@ -1029,7 +1101,9 @@ function renderSeats(){
       el._dots.innerHTML = p.rem.map(m => `<i style="--c:${MODS[m].color}"></i>`).join('');
       el.title = `${p.name}（${p.dx}）：${p.rem.map(m => MODS[m].short).join('、')}`;
     }
-    const cls = 'seat' + (S.sel === p.id ? ' sel' : '');
+    if (p.arriving){ p.arriving = false; p.walkInUntil = performance.now() + walk(p, doorPt(), toStage(el._ring.getBoundingClientRect(), .5, .5)); }
+    const incoming = p.atBed != null || p.walkInUntil > NOW;
+    const cls = 'seat' + (S.sel === p.id ? ' sel' : '') + (incoming ? ' incoming' : '');
     if (el.className !== cls) el.className = cls;
     const pc = clamp(p.patience, 0, 100);
     el._ring.style.setProperty('--p', pc.toFixed(1));
@@ -1058,7 +1132,7 @@ function renderCard(){
   }).join('');
   card.innerHTML = `<span class="av">${p.svg}</span><span class="nm"></span><span class="rx">${chips}</span>`;
   const nm = card.querySelector('.nm'); nm.textContent = p.name;
-  const sm = document.createElement('small'); sm.textContent = `${p.dx}・${where}`; nm.appendChild(sm);
+  const sm = document.createElement('small'); sm.textContent = `${p.no} 號・${p.dx}・${where}`; nm.appendChild(sm);
 }
 
 function meter(id, bar, v, invert){
@@ -1238,6 +1312,13 @@ const Music = (() => {
     },
     stop(){ playing = false; clearInterval(timer); timer = null; },
     pause(){ if (ctx) ctx.suspend(); },
+    ding(){
+      if (!on || !init()) return;
+      ctx.resume();
+      const t = ctx.currentTime + 0.02;
+      tone('sine', mid(88), t, 0.35, 0.55);
+      tone('sine', mid(84), t + 0.2, 0.55, 0.55);
+    },
     resume(){ if (ctx && on) ctx.resume(); },
     toggle(){
       on = !on; label();
