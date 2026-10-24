@@ -365,7 +365,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 <script>
 /* ================= 內容設定（給物理治療師改這裡） ================= */
 // 速度：現實幾秒 = 遊戲 1 分鐘（右上角可切換）
-const SPEEDS = [ { name:'慢', sec:1.8 }, { name:'標準', sec:1.2 }, { name:'快', sec:0.8 } ];
+// 標準速度下一診約 15–18 分鐘
+const SPEEDS = [ { name:'慢', sec:6.5 }, { name:'標準', sec:5 }, { name:'快', sec:3.5 } ];
 let speedIdx = 1;
 try { const v = +localStorage.getItem('ptSpeed'); if (SPEEDS[v]) speedIdx = v; } catch (e) {}
 
@@ -377,12 +378,12 @@ const SHIFTS = {
 
 // 治療項目：dur = 治療分鐘；setup = 你擺位要花的分鐘；back = 擺位對腰的負擔
 const MODS = {
-  heat:  { name:'熱敷',     short:'熱敷',   dur:15, setup:1,   back:0.8, color:'var(--heat)',  order:1, verb:'包熱敷包' },
-  sw:    { name:'短波',     short:'短波',   dur:15, setup:1,   back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
-  estim: { name:'電療',     short:'電療',   dur:15, setup:1,   back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
-  tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:1.5, back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
-  tracC: { name:'頸椎牽引', short:'拉脖子', dur:15, setup:1,   back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
-  laser: { name:'雷射',     short:'雷射',   dur:5,  setup:0.5, back:0.2, color:'var(--laser)', order:5, verb:'對準雷射' },
+  heat:  { name:'熱敷',     short:'熱敷',   dur:15, setup:0.4, back:0.8, color:'var(--heat)',  order:1, verb:'包熱敷包' },
+  sw:    { name:'短波',     short:'短波',   dur:15, setup:0.4, back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
+  estim: { name:'電療',     short:'電療',   dur:15, setup:0.4, back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
+  tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:0.6, back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
+  tracC: { name:'頸椎牽引', short:'拉脖子', dur:15, setup:0.5, back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
+  laser: { name:'雷射',     short:'雷射',   dur:5,  setup:0.25, back:0.2, color:'var(--laser)', order:5, verb:'對準雷射' },
 };
 
 // 治療室分區：n = 床位數；cols = 每排幾個；row = 放上排(1)或下排(2)
@@ -647,7 +648,7 @@ function completeStep(st){
   if (st.m === 'heat' && st.p.sleepy && !st.p.woke){
     const q = st.p; q.woke = true;
     msg(`${q.name} 在熱敷床上睡到打呼……`, 'bad');
-    setLock(`輕輕叫醒睡著的${q.name}`, 1, () => completeStep(st));
+    setLock(`輕輕叫醒睡著的${q.name}`, 0.5, () => completeStep(st));
     return;
   }
   const p = st.p, late = st.doneAt != null ? S.t - st.doneAt : 0;
@@ -1059,7 +1060,7 @@ $('toiletBtn').addEventListener('click', () => {
 });
 function setSpeedLabel(){ $('speedBtn').textContent = `速度：${SPEEDS[speedIdx].name}`; }
 $('speedBtn').addEventListener('click', () => {
-  speedIdx = (speedIdx + 1) % SPEEDS.length; setSpeedLabel();
+  speedIdx = (speedIdx + 1) % SPEEDS.length; setSpeedLabel(); renderShifts();
   try { localStorage.setItem('ptSpeed', String(speedIdx)); } catch (e) {}
 });
 setSpeedLabel();
@@ -1075,8 +1076,11 @@ $('quitBtn').addEventListener('click', toMenu);
 $('menuBtn').addEventListener('click', toMenu);
 $('againBtn').addEventListener('click', () => { newGame(lastShift); Music.start(); });
 
-$('shifts').innerHTML = Object.entries(SHIFTS).map(([k, s]) =>
-  `<button class="shift" type="button" data-k="${k}"><span class="n">${s.name}</span><span class="tm2">${fmt(s.start)}–${fmt(s.start+s.len)}</span><span class="go">開診 ›</span><span class="d">${s.desc}</span></button>`).join('');
+function renderShifts(){
+  $('shifts').innerHTML = Object.entries(SHIFTS).map(([k, s]) =>
+    `<button class="shift" type="button" data-k="${k}"><span class="n">${s.name}</span><span class="tm2">${fmt(s.start)}–${fmt(s.start+s.len)}・約 ${Math.round(s.len*SPEEDS[speedIdx].sec/60)} 分鐘</span><span class="go">開診 ›</span><span class="d">${s.desc}</span></button>`).join('');
+}
+renderShifts();
 $('shifts').addEventListener('click', e => { const b = e.target.closest('.shift'); if (b){ newGame(b.dataset.k); Music.start(); } });
 $('legend').innerHTML = ZONES.map(z => `<span class="chip" style="--c:${MODS[z.m].color}">${MODS[z.m].short} ×${z.n}</span>`).join('');
 
