@@ -18,7 +18,7 @@
   --bg:#D9E1DE; --panel:#F8FAF9; --panel2:#ECF1EF; --ink:#1B2A30; --muted:#56676C; --line:#C6D2CF;
   --floor:#F1F4F2; --tile:rgba(27,42,48,.045); --wall:#4A5A60; --bed:#FFFFFF; --sheet:#DCE8EA; --avbg:#DDE7EA;
   --brand:#0D7175; --brand-ink:#FFFFFF;
-  --heat:#D2621F; --ice:#1597B5; --estim:#2860CF; --trac:#7646C0; --neck:#9A4FB8; --laser:#C02E74; --sw:#8C6A0E;
+  --heat:#D2621F; --ice:#1597B5; --estim:#2860CF; --trac:#7646C0; --neck:#9A4FB8; --laser:#C02E74; --sw:#8C6A0E; --us:#4B8F2A;
   --good:#1F8A5A; --warn:#B87E0C; --bad:#C7362F;
   --shadow:0 1px 0 rgba(27,42,48,.05),0 8px 20px -14px rgba(27,42,48,.35);
   --f-disp:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
@@ -29,7 +29,7 @@
   --bg:#0B1113; --panel:#172024; --panel2:#1D282D; --ink:#E3ECEA; --muted:#91A2A5; --line:#2B3A3F;
   --floor:#151E21; --tile:rgba(255,255,255,.035); --wall:#7F9196; --bed:#24323A; --sheet:#2B3D44; --avbg:#33454C;
   --brand:#3DB0AC; --brand-ink:#0A1315;
-  --heat:#F0874A; --ice:#4CC3DE; --estim:#6493F2; --trac:#A47EEA; --neck:#C27FE0; --laser:#EC6FA8; --sw:#D9B04A;
+  --heat:#F0874A; --ice:#4CC3DE; --estim:#6493F2; --trac:#A47EEA; --neck:#C27FE0; --laser:#EC6FA8; --sw:#D9B04A; --us:#8DCB5E;
   --good:#45B884; --warn:#E2AD3B; --bad:#EE6A60;
   --shadow:0 1px 0 rgba(0,0,0,.25),0 10px 22px -14px rgba(0,0,0,.7);
   color-scheme:dark}}
@@ -37,7 +37,7 @@
   --bg:#0B1113; --panel:#172024; --panel2:#1D282D; --ink:#E3ECEA; --muted:#91A2A5; --line:#2B3A3F;
   --floor:#151E21; --tile:rgba(255,255,255,.035); --wall:#7F9196; --bed:#24323A; --sheet:#2B3D44; --avbg:#33454C;
   --brand:#3DB0AC; --brand-ink:#0A1315;
-  --heat:#F0874A; --ice:#4CC3DE; --estim:#6493F2; --trac:#A47EEA; --neck:#C27FE0; --laser:#EC6FA8; --sw:#D9B04A;
+  --heat:#F0874A; --ice:#4CC3DE; --estim:#6493F2; --trac:#A47EEA; --neck:#C27FE0; --laser:#EC6FA8; --sw:#D9B04A; --us:#8DCB5E;
   --good:#45B884; --warn:#E2AD3B; --bad:#EE6A60;
   --shadow:0 1px 0 rgba(0,0,0,.25),0 10px 22px -14px rgba(0,0,0,.7);
   color-scheme:dark}
@@ -100,6 +100,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .u-ice.run .furn::after,.u-ice.done .furn::after{content:"";position:absolute;left:20%;right:20%;top:60%;height:20%;border-radius:4px;
   background:linear-gradient(90deg,transparent 46%,color-mix(in srgb,var(--ice) 40%,var(--bed)) 46% 54%,transparent 54%),linear-gradient(0deg,transparent 40%,color-mix(in srgb,var(--ice) 40%,var(--bed)) 40% 60%,transparent 60%),color-mix(in srgb,var(--ice) 75%,var(--bed))}
 .u-estim .furn::after{content:"";position:absolute;right:-1px;bottom:9%;width:34%;height:13%;border-radius:3px 0 0 3px;background:var(--estim);opacity:.85}
+.u-us .furn::after{content:"";position:absolute;left:62%;top:60%;width:13%;height:26%;border-radius:4px 4px 7px 7px;background:var(--us);transform:rotate(25deg)}
+.u-us.run .furn::before{content:"";position:absolute;left:24%;top:60%;width:34%;height:16%;border-radius:50%;background:color-mix(in srgb,var(--us) 30%,var(--bed))}
 .u-sw .furn::after{content:"";position:absolute;left:50%;top:60%;width:38%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
   border:3px solid var(--sw);background:color-mix(in srgb,var(--sw) 15%,var(--bed));box-sizing:border-box}
 .u-tracL .furn::after{content:"";position:absolute;left:-4px;right:-4px;top:66%;height:6%;background:var(--trac);border-radius:2px}
@@ -316,7 +318,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       <div class="col">
         <div class="kicker">復健科診所 · 物理治療師值班模擬</div>
         <h1 class="title">不要說<br>今天<span class="pine">很閒</span></h1>
-        <p class="lede">26 個床位同時在嗶，每個病人的處方都不一樣，而你只有一個人。撐過這一診，準時下班。</p>
+        <p class="lede">27 台機器同時在嗶，每個病人的處方都不一樣，而你只有一個人。撐過這一診，準時下班。</p>
         <div class="legend" id="legend"></div>
         <p class="foot">非商業作品，僅供教育推廣與交流分享，請勿用於任何商業用途。<br>遊戲中的情境、治療參數與處置皆為練習用的簡化設定，實際臨床請依醫囑及所屬院所規範執行。<br>© Janice 製作</p>
       </div>
@@ -324,7 +326,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         <div class="shifts" id="shifts"></div>
         <ol class="howto">
           <li><b>安排床位</b>：點候診病人，再點發亮的床位。直接點空床，會自動排最等不及的人。</li>
-          <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。</li>
+          <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。<b>超音波</b>要你全程拿探頭打 3 分鐘。</li>
           <li><b>牽引前要先熱敷</b>；急性受傷的病人改做冰敷。其他順序可依空位調整。</li>
           <li><b>機器嗶嗶</b>就點一下，再決定病人下一個去哪，也可以先回候診區等。熱敷、冰敷超時會受傷。</li>
           <li><b>突發狀況</b>：跳電、機器故障、主任巡房、長輩團報到……隨時可能發生。</li>
@@ -398,6 +400,7 @@ const SHIFTS = {
 const MODS = {
   heat:  { name:'熱敷',     short:'熱敷',   dur:15, setup:0.7, back:0.8, color:'var(--heat)',  order:1, verb:'包熱敷包' },
   ice:   { name:'冰敷',     short:'冰敷',   dur:15, setup:0.7, back:0.6, color:'var(--ice)',   order:1, verb:'敷冰袋' },
+  us:    { name:'超音波',   short:'超音波', dur:3,  setup:0.3, back:0.4, color:'var(--us)',    order:2, verb:'抹凝膠、打超音波', hands:true },
   sw:    { name:'短波',     short:'短波',   dur:15, setup:0.7, back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
   estim: { name:'電療',     short:'電療',   dur:15, setup:0.7, back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
   tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:1,   back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
@@ -410,7 +413,8 @@ const ZONES = [
   { m:'heat',  name:'熱敷區',   n:3, cols:3, row:1, furn:'bed',   label:'熱敷床', stack:'hc' },
   { m:'ice',   name:'冰敷區',   n:3, cols:3, row:1, furn:'bed',   label:'冰敷床', stack:'hc' },
   { m:'estim', name:'電療區',   n:8, cols:4, row:1, furn:'bed',   label:'電療床' },
-  { m:'sw',    name:'短波區',   n:2, cols:2, row:1, furn:'bed',   label:'短波' },
+  { m:'us',    name:'超音波',   n:1, cols:1, row:1, furn:'bed',   label:'超音波', stack:'sx' },
+  { m:'sw',    name:'短波區',   n:2, cols:2, row:1, furn:'bed',   label:'短波', stack:'sx' },
   { m:'tracL', name:'拉腰區',   n:3, cols:3, row:2, furn:'long',  label:'腰椎牽引床' },
   { m:'tracC', name:'拉脖子區', n:3, cols:3, row:2, furn:'chair', label:'頸椎牽引椅' },
   { m:'laser', name:'雷射區',   n:4, cols:4, row:2, furn:'chair', label:'雷射' },
@@ -420,13 +424,13 @@ const ZONES = [
 // metal = 體內有金屬植入物的機率（短波前會被問到）
 const SURNAMES = ['陳','林','黃','張','李','王','吳','劉','蔡','楊','許','鄭','謝','郭'];
 const PARTS = [
-  { part:'頸', dx:'頸部痠痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.85,estim:.6,tracC:.8,laser:.25,sw:.15}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
-  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.85,estim:.6,tracL:.8,laser:.15,sw:.25}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
-  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.8,estim:.7,laser:.45,sw:.35}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
-  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.7,estim:.7,laser:.45,sw:.35}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
-  { part:'踝', dx:'腳踝舊傷', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.3}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
-  { part:'肘', dx:'網球肘',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.3,estim:.6,laser:.65}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
-  { part:'腕', dx:'媽媽手',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.5,estim:.5,laser:.65}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
+  { part:'頸', dx:'頸部痠痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.15}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
+  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.15}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
+  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.4,estim:.7,laser:.45,sw:.35,us:.4}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
+  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.35,estim:.7,laser:.45,sw:.35,us:.35}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
+  { part:'踝', dx:'腳踝舊傷', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.35}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
+  { part:'肘', dx:'網球肘',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.45}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
+  { part:'腕', dx:'媽媽手',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.4}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
 ];
 const URGENT = { part:'頸', dx:'急性落枕', title:'先生', look:'man', pat:30, rx:['ice','estim','laser'] };
 
@@ -525,12 +529,12 @@ const EVENTS = [
 ];
 
 // 突發狀況（會改變治療室狀態）
-const ELECTRIC = { estim:1, sw:1, laser:1, tracL:1, tracC:1 };
+const ELECTRIC = { estim:1, sw:1, us:1, laser:1, tracL:1, tracC:1 };
 const INCIDENTS = [
   { id:'power', title:'治療室跳電了', ok:() => S.power,
     run(){ S.power = false; S.powerAt = S.t; return '電療、短波、雷射、牽引全部停擺。點任一台停電的機器去重開總開關'; } },
   { id:'broken', title:'機器故障', ok:() => S.st.filter(s => s.broken).length < 2,
-    run(){ const c = S.st.filter(s => ELECTRIC[s.m] && !s.broken); const st = c[Math.floor(Math.random()*c.length)]; st.broken = true;
+    run(){ const c = S.st.filter(s => ELECTRIC[s.m] && !MODS[s.m].hands && !s.broken); const st = c[Math.floor(Math.random()*c.length)]; st.broken = true;
       return `${st.label}突然沒反應${st.p ? `，${st.p.name}還躺在上面` : ''}。點它去修理`; } },
   { id:'water', title:'熱敷箱水位太低', ok:() => !S.heatLow,
     run(){ S.heatLow = true; return '熱敷包不夠熱，不能再排新的熱敷。點空的熱敷床去補水加熱'; } },
@@ -675,6 +679,10 @@ function beginMod(st, p){
   S.back = clamp(S.back + M.back, 0, 100);
   S.stamina = clamp(S.stamina - 0.6, 0, 100);
   S.throat = clamp(S.throat + 0.4, 0, 100);
+  if (M.hands){
+    setLock(`幫${p.name}${M.verb}`, setup + M.dur, () => { st.doneAt = S.t; completeStep(st); });
+    return;
+  }
   setLock(`幫${p.name}${M.verb}`, setup, null);
 }
 function cutMod(st, p){ p.rem = p.rem.filter(m => m !== st.m); p.cut.push(st.m); afterMod(st, p); }
@@ -797,6 +805,7 @@ function step(g){
   }
   for (const st of S.st){
     if (!st.p || !st.on) continue;
+    if (MODS[st.m].hands) continue;
     if (st.doneAt == null && (st.broken || (!S.power && ELECTRIC[st.m]))){ st.start += g; continue; }
     if (st.doneAt == null && S.t >= st.start + st.dur) st.doneAt = st.start + st.dur;
     if (S.inspectUntil && st.doneAt != null && !st.insp && S.t - st.doneAt > 1.5){ st.insp = true; S.inspectHits++; msg(`主任皺著眉看${st.label}一直嗶……`, 'bad'); }
