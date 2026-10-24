@@ -49,20 +49,20 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 button{font:inherit;color:inherit}
 button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
-#stage{position:fixed;left:0;top:0;width:960px;height:540px;transform-origin:0 0;display:grid;grid-template-rows:46px minmax(0,1fr);gap:8px;padding:8px 10px 10px;box-sizing:border-box}
+#stage{position:fixed;left:0;top:0;width:960px;height:540px;transform-origin:0 0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:46px minmax(0,1fr);gap:8px;padding:8px 10px 10px;box-sizing:border-box}
 
-.hud{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px;box-shadow:var(--shadow)}
+.hud{min-width:0;overflow:hidden;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px;box-shadow:var(--shadow)}
 .clock{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
 .clock b{font-family:var(--f-mono);font-weight:600;font-size:24px;font-variant-numeric:tabular-nums}
 .clock span{font-size:12px;color:var(--muted)}
 .clock span.ot{color:var(--bad);font-weight:700}
-.meters{display:flex;gap:10px;flex:none}
-.meter{width:74px;display:flex;flex-direction:column;gap:2px}
+.meters{display:flex;gap:8px;flex:none}
+.meter{width:60px;display:flex;flex-direction:column;gap:2px}
 .meter .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
 .meter .lab b{font-family:var(--f-mono);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
 .track{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
 .track i{display:block;height:100%;width:0;border-radius:3px;background:var(--good);transition:width .2s linear}
-.lock{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:30px;border-radius:8px;padding:0 10px;background:var(--panel2);color:var(--muted);font-size:12px}
+.lock{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;height:30px;border-radius:8px;padding:0 10px;background:var(--panel2);color:var(--muted);font-size:12px}
 .lock span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lock .track{width:70px;flex:none;visibility:hidden}
 .lock.on{background:var(--ink);color:var(--bg);font-weight:700}
@@ -71,7 +71,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .score{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
 .score small{font-size:11px;color:var(--muted)}
 .score b{font-family:var(--f-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.iconbtn{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px}
+.iconbtn{flex:none;white-space:nowrap;border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:12px}
 
 .main{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:10px;min-height:0}
 
@@ -246,6 +246,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
     </div>
     <div class="lock" id="lock"><span id="lockLab">空檔中</span><div class="track"><i id="lockBar"></i></div></div>
     <div class="score"><small>分數</small><b id="score">0</b></div>
+    <button class="iconbtn" id="musicBtn" type="button">音樂：開</button>
     <button class="iconbtn" id="speedBtn" type="button">速度：標準</button>
     <button class="iconbtn" id="pauseBtn" type="button">暫停</button>
   </header>
@@ -704,7 +705,7 @@ function applyFx(fx){
 
 /* ---------- 結算 ---------- */
 function finish(reason){
-  S.over = true;
+  S.over = true; Music.stop();
   const ot = Math.max(0, Math.round(S.t - S.end));
   const left = S.queue.length + S.st.filter(s => s.p).length;
   const final = S.score - left * 15;
@@ -934,17 +935,93 @@ $('waterBtn').addEventListener('click', () => {
   setLock('去茶水間喝水', 1, () => { S.throat = 0; S.stamina = clamp(S.stamina + 12, 0, 100); S.bladder = clamp(S.bladder + 25, 0, 100); msg('喝完水，活過來了。等等會想上廁所。', 'good'); });
 });
 $('evGo').addEventListener('click', closeEvent);
-$('pauseBtn').addEventListener('click', () => { if (!S || S.over || modal) return; S.paused = true; $('pauseOv').hidden = false; });
-$('resumeBtn').addEventListener('click', () => { S.paused = false; $('pauseOv').hidden = true; });
-const toMenu = () => { $('pauseOv').hidden = true; $('endOv').hidden = true; if (S) S.over = true; $('startOv').hidden = false; };
+$('pauseBtn').addEventListener('click', () => { if (!S || S.over || modal) return; S.paused = true; $('pauseOv').hidden = false; Music.pause(); });
+$('resumeBtn').addEventListener('click', () => { S.paused = false; $('pauseOv').hidden = true; Music.resume(); });
+const toMenu = () => { Music.stop(); $('pauseOv').hidden = true; $('endOv').hidden = true; if (S) S.over = true; $('startOv').hidden = false; };
 $('quitBtn').addEventListener('click', toMenu);
 $('menuBtn').addEventListener('click', toMenu);
-$('againBtn').addEventListener('click', () => newGame(lastShift));
+$('againBtn').addEventListener('click', () => { newGame(lastShift); Music.start(); });
 
 $('shifts').innerHTML = Object.entries(SHIFTS).map(([k, s]) =>
   `<button class="shift" type="button" data-k="${k}"><span class="n">${s.name}</span><span class="tm2">${fmt(s.start)}–${fmt(s.start+s.len)}</span><span class="go">開診 ›</span><span class="d">${s.desc}</span></button>`).join('');
-$('shifts').addEventListener('click', e => { const b = e.target.closest('.shift'); if (b) newGame(b.dataset.k); });
+$('shifts').addEventListener('click', e => { const b = e.target.closest('.shift'); if (b){ newGame(b.dataset.k); Music.start(); } });
 $('legend').innerHTML = ZONES.map(z => `<span class="chip" style="--c:${MODS[z.m].color}">${MODS[z.m].short} ×${z.n}</span>`).join('');
+
+/* ---------- 背景音樂（Web Audio 即時合成，原創旋律） ---------- */
+const Music = (() => {
+  const mid = n => 440 * Math.pow(2, (n - 69) / 12);
+  // 8 小節 × 8 個八分音符；null = 休止
+  const LEAD = [
+    72,null,76,79, 76,null,72,74,   76,null,72,69, 72,null,null,null,
+    69,null,72,77, 76,74,72,null,   74,null,71,67, 74,null,null,null,
+    72,null,76,79, 81,79,76,null,   76,null,74,72, 69,null,72,null,
+    74,null,77,74, 72,null,69,null, 71,null,74,79, 77,null,74,null,
+  ];
+  const ROOTS = [48,45,41,43,48,45,50,43]; // C Am F G C Am Dm G
+  let ctx = null, master = null, noise = null, timer = null, playing = false, nextT = 0, step = 0;
+  let on = true;
+  try { on = localStorage.getItem('ptMusic') !== 'off'; } catch (e) {}
+
+  function init(){
+    if (ctx) return true;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = 0.11; master.connect(ctx.destination);
+    noise = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+    const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
+    return true;
+  }
+  function tone(type, freq, t, dur, vol){
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function hat(t, vol){
+    const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    src.buffer = noise; f.type = 'highpass'; f.frequency.value = 7000;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    src.connect(f); f.connect(g); g.connect(master); src.start(t);
+  }
+  function bpm(){ return (typeof S !== 'undefined' && S && S.t < S.rushUntil) ? 140 : 116; }
+  function sched(){
+    while (nextT < ctx.currentTime + 0.15){
+      const e = 60 / bpm() / 2, i = step % 64, bar = Math.floor(i / 8), k = i % 8;
+      const n = LEAD[i];
+      if (n) tone('square', mid(n), nextT, e * 1.6, 0.16);
+      const r = ROOTS[bar];
+      if (k === 0 || k === 4) tone('triangle', mid(r), nextT, e * 1.8, 0.5);
+      if (k === 6) tone('triangle', mid(r + 7), nextT, e * 0.9, 0.35);
+      if (k % 2 === 1) hat(nextT, 0.12);
+      nextT += e; step++;
+    }
+  }
+  function label(){ const b = document.getElementById('musicBtn'); if (b) b.textContent = on ? '音樂：開' : '音樂：關'; }
+  return {
+    start(){
+      if (!on || !init()) return;
+      ctx.resume();
+      if (playing) return;
+      playing = true; step = 0; nextT = ctx.currentTime + 0.08;
+      timer = setInterval(sched, 25);
+    },
+    stop(){ playing = false; clearInterval(timer); timer = null; },
+    pause(){ if (ctx) ctx.suspend(); },
+    resume(){ if (ctx && on) ctx.resume(); },
+    toggle(){
+      on = !on; label();
+      try { localStorage.setItem('ptMusic', on ? 'on' : 'off'); } catch (e) {}
+      if (on){ if (S && !S.over) this.start(); }
+      else this.stop();
+    },
+    label,
+  };
+})();
+Music.label();
+$('musicBtn').addEventListener('click', () => Music.toggle());
 
 /* ---------- 橫向舞台縮放 ---------- */
 let rotateOk = false;
@@ -970,7 +1047,7 @@ function frame(now){
   if (S && !S.over) render();
   requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden && S && !S.over && !modal){ S.paused = true; $('pauseOv').hidden = false; } });
+document.addEventListener('visibilitychange', () => { if (document.hidden && S && !S.over && !modal){ S.paused = true; $('pauseOv').hidden = false; Music.pause(); } });
 
 newGame('am'); render(); S.over = true; $('startOv').hidden = false;
 requestAnimationFrame(frame);
