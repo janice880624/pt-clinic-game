@@ -148,6 +148,18 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .alert span{font-size:12px;color:var(--muted)}
 @keyframes pop{from{transform:translate(-50%,-50%) scale(.85);opacity:0}}
 @media (prefers-reduced-motion:reduce){.alert{animation:none}}
+.picker{position:absolute;z-index:15;width:204px;box-sizing:border-box;background:var(--panel);border:2px solid var(--brand);border-radius:12px;
+  box-shadow:0 14px 30px -12px rgba(0,0,0,.45);padding:8px;display:flex;flex-direction:column;gap:6px}
+.picker .ph{font-size:12px;color:var(--muted);line-height:1.3}
+.picker .ph b{color:var(--ink);font-size:13px}
+.pk{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.pk button{--c:var(--muted);border:1.5px solid color-mix(in srgb,var(--c) 45%,var(--line));background:color-mix(in srgb,var(--c) 10%,var(--panel));
+  border-radius:8px;padding:4px 7px;text-align:left;cursor:pointer;display:flex;flex-direction:column;line-height:1.25}
+.pk button b{color:var(--c);font-size:13px}
+.pk button small{font-size:10.5px;color:var(--muted)}
+.pk button:disabled{opacity:.45;cursor:not-allowed}
+.pk button:not(:disabled):hover{border-color:var(--c)}
+.pk .wait{grid-column:1/-1;align-items:center;text-align:center}
 @keyframes beep{0%{box-shadow:0 2px 0 var(--line)}100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--mc) 45%,transparent)}}
 @keyframes blink{0%{opacity:1}100%{opacity:.2}}
 
@@ -297,6 +309,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
     </aside>
   </div>
 
+  <div class="picker" id="picker" hidden><div class="ph"><b id="pkName"></b><br>下一個去哪？</div><div class="pk" id="pkOpts"></div></div>
+
   <div class="ov" id="startOv">
     <div class="card wide">
       <div class="col">
@@ -312,7 +326,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
           <li><b>安排床位</b>：點候診病人，再點發亮的床位。直接點空床，會自動排最等不及的人。</li>
           <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。</li>
           <li><b>牽引前要先熱敷</b>；急性受傷的病人改做冰敷。其他順序可依空位調整。</li>
-          <li><b>機器嗶嗶</b>就點一下，病人會走去下一區。熱敷超時會燙傷。</li>
+          <li><b>機器嗶嗶</b>就點一下，再決定病人下一個去哪，也可以先回候診區等。熱敷、冰敷超時會受傷。</li>
           <li><b>突發狀況</b>：跳電、機器故障、主任巡房、長輩團報到……隨時可能發生。</li>
           <li><b>記得喝水、上廁所</b>：太渴擺位會變慢，膀胱滿了會忍不住衝去廁所。</li>
         </ol>
@@ -685,15 +699,56 @@ function afterMod(st, p){
     if (S.peek === p) S.peek = null;
     msg(`${p.name} 治療完成，去櫃台批價了。`, 'good'); return;
   }
-  for (const m of [...p.rem].sort(byOrder)){
-    if (!canDo(p, m)) continue;
-    const free = S.st.find(s => s.m === m && !s.p && usable(s));
-    if (free){ S.peek = p; startMod(free, p); msg(`${p.name} 走去${free.label}。`); return; }
-  }
+  // 由玩家決定下一站：病人先站到候診區最前面並被選取，跳出選單
   p.patience = Math.max(p.patience, 75);
   S.queue.unshift(p);
-  msg(`${p.name} 回候診區，還要做：${p.rem.map(m => MODS[m].short).join('、')}。`);
+  S.sel = p.id; S.peek = null;
+  openPicker(p, S.st.indexOf(st));
+  msg(`${p.name} 這項做完了，還要做：${p.rem.map(m => MODS[m].short).join('、')}。下一個去哪？`);
 }
+
+/* ---------- 下一站選單 ---------- */
+let PK = null;
+function freeCount(m){ return S.st.filter(s => s.m === m && !s.p && usable(s)).length; }
+function openPicker(p, i){
+  PK = { p, i, key:'' };
+  $('pkName').textContent = p.name;
+  const pk = $('picker'); pk.hidden = false;
+  renderPicker(true);
+  const stage = $('stage').getBoundingClientRect(), sc = stage.width / 960;
+  const r = unitEls[i].getBoundingClientRect();
+  let x = (r.right - stage.left)/sc + 6, y = (r.top - stage.top)/sc - 6;
+  if (x + 210 > 950) x = (r.left - stage.left)/sc - 210;
+  y = clamp(y, 54, 530 - pk.offsetHeight);
+  pk.style.left = x + 'px'; pk.style.top = y + 'px';
+}
+function closePicker(){ PK = null; $('picker').hidden = true; }
+function renderPicker(force){
+  if (!PK) return;
+  const p = PK.p;
+  if (S.over || !S.queue.includes(p) || S.sel !== p.id){ closePicker(); return; }
+  const opts = p.rem.map(m => {
+    const n = freeCount(m), blocked = !canDo(p, m);
+    return { m, n, blocked, note: blocked ? '要先熱敷' : n ? `空床 ${n}` : '客滿' };
+  }).sort((a,b) => byOrder(a.m, b.m));
+  const key = opts.map(o => o.m + o.note).join('|') + (S.lock ? 'L' : '');
+  if (!force && key === PK.key) return;
+  PK.key = key;
+  $('pkOpts').innerHTML = opts.map(o =>
+    `<button type="button" data-m="${o.m}" style="--c:${MODS[o.m].color}" ${o.blocked || !o.n ? 'disabled' : ''}><b>${MODS[o.m].short}</b><small>${o.note}</small></button>`).join('')
+    + `<button type="button" class="wait" data-m="wait"><b>先回候診區等</b></button>`;
+}
+$('pkOpts').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled || !PK || !S || S.over) return;
+  const p = PK.p, m = b.dataset.m;
+  if (m === 'wait'){ S.sel = null; closePicker(); msg(`${p.name} 回候診區等空位。`); return; }
+  if (S.lock) return busy();
+  const free = S.st.find(s => s.m === m && !s.p && usable(s));
+  if (!free) return renderPicker(true);
+  closePicker();
+  assign(free, p);
+  msg(`${p.name} 走去${free.label}。`);
+});
 
 function step(g){
   S.t += g;
@@ -837,6 +892,7 @@ function applyFx(fx){
 
 /* ---------- 結算 ---------- */
 function finish(reason){
+  closePicker();
   S.over = true; Music.stop();
   const ot = Math.max(0, Math.round(S.t - S.end));
   const left = S.queue.length + S.st.filter(s => s.p).length;
@@ -1028,7 +1084,7 @@ function render(){
   if (S.deskDownUntil) inc.push([`櫃台當機 ${Math.ceil(S.deskDownUntil - S.t)} 分`, 'warn']);
   const ik = inc.map(x => x[0]).join('|'), ie = $('incs');
   if (ie._k !== ik){ ie._k = ik; ie.innerHTML = inc.map(([t, c]) => `<span class="${c}">${t}</span>`).join(''); }
-  renderRoom(); renderSeats(); renderCard();
+  renderRoom(); renderSeats(); renderCard(); renderPicker();
 }
 
 function msg(text, tone){
@@ -1097,7 +1153,7 @@ $('waterBtn').addEventListener('click', () => {
 $('evGo').addEventListener('click', closeEvent);
 $('pauseBtn').addEventListener('click', () => { if (!S || S.over || modal) return; S.paused = true; $('pauseOv').hidden = false; Music.pause(); });
 $('resumeBtn').addEventListener('click', () => { S.paused = false; $('pauseOv').hidden = true; Music.resume(); });
-const toMenu = () => { Music.stop(); $('pauseOv').hidden = true; $('endOv').hidden = true; if (S) S.over = true; $('startOv').hidden = false; };
+const toMenu = () => { Music.stop(); closePicker(); $('pauseOv').hidden = true; $('endOv').hidden = true; if (S) S.over = true; $('startOv').hidden = false; };
 $('quitBtn').addEventListener('click', toMenu);
 $('menuBtn').addEventListener('click', toMenu);
 $('againBtn').addEventListener('click', () => { newGame(lastShift); Music.start(); });
