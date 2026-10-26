@@ -67,15 +67,16 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .clock span{font-size:12px;color:var(--muted)}
 .clock span.ot{color:var(--bad);font-weight:700}
 .meters{display:flex;gap:8px;flex:none}
-.meter{width:60px;display:flex;flex-direction:column;gap:2px}
+.meter{width:52px;display:flex;flex-direction:column;gap:2px}
 .meter .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
 .meter .lab b{font-family:var(--f-mono);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
 .track{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
 .track i{display:block;height:100%;width:0;border-radius:3px;background:var(--good);transition:width .2s linear}
-.lock{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;height:30px;border-radius:8px;padding:0 10px;background:var(--panel2);color:var(--muted);font-size:12px}
-.lock span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lock .track{width:70px;flex:none;visibility:hidden}
-.lock.on{background:var(--ink);color:var(--bg);font-weight:700}
+.lock{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;min-height:30px;max-height:40px;box-sizing:border-box;border-radius:8px;padding:2px 10px;background:var(--panel2);color:var(--muted);font-size:12px}
+.lock span{flex:1;min-width:0;overflow:hidden;white-space:normal;line-height:1.25;font-size:11.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.lock{position:relative}
+.lock .track{position:absolute;left:8px;right:8px;bottom:2px;height:3px;width:auto;border:0;visibility:hidden}
+.lock.on{background:var(--ink);color:var(--bg);font-weight:700;padding-bottom:6px}
 .lock.on .track{visibility:visible;background:color-mix(in srgb,var(--bg) 25%,transparent);border-color:transparent}
 .lock.on .track i{background:var(--bg)}
 .score{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
@@ -302,6 +303,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .rx i.done,.rx i.cut{color:var(--muted);background:transparent;text-decoration:line-through;font-weight:500}
 .rx i.cut{opacity:.6}
 .rx i.now{color:var(--panel);background:var(--c)}
+.swapbtn{font-size:11px;font-weight:700;line-height:1.4;padding:0 7px;border-radius:999px;border:1.5px dashed var(--laser);background:var(--panel);color:var(--laser);cursor:pointer}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .act{border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:3px 10px;line-height:1.3;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
 .act b{font-weight:700}
@@ -576,13 +578,13 @@ const ZONES = [
 // metal = 體內有金屬植入物的機率（短波前會被問到）
 const SURNAMES = ['陳','林','黃','張','李','王','吳','劉','蔡','楊','許','鄭','謝','郭'];
 const PARTS = [
-  { part:'頸', dx:'脖子痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.15,ex:.07}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
-  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.15,ex:.1}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
-  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.4,estim:.7,laser:.45,sw:.35,us:.4,ex:.15}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
-  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.35,estim:.7,laser:.45,sw:.35,us:.35,ex:.15}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
-  { part:'踝', dx:'腳踝痛', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.35,ex:.07}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
-  { part:'肘', dx:'手肘痛',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.45,ex:.07}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
-  { part:'腕', dx:'手腕痛',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.4,ex:.07}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
+  { part:'頸', dx:'脖子痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.08,ex:.07}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
+  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.08,ex:.1}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
+  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.4,estim:.7,laser:.45,sw:.35,us:.2,ex:.15}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
+  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.35,estim:.7,laser:.45,sw:.35,us:.18,ex:.15}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
+  { part:'踝', dx:'腳踝痛', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.18,ex:.07}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
+  { part:'肘', dx:'手肘痛',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.22,ex:.07}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
+  { part:'腕', dx:'手腕痛',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.2,ex:.07}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
 ];
 const URGENT = { part:'頸', dx:'落枕', title:'先生', look:'man', pat:30, rx:['pack','estim','laser'] };
 // 症狀描述：有紅腫熱痛 → 該冰敷；慢性痠痛 → 該熱敷
@@ -750,7 +752,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v5'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v6'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -1116,13 +1118,24 @@ function renderPicker(force){
   PK.key = key;
   $('pkOpts').innerHTML = opts.map(o =>
     `<button type="button" data-m="${o.m}" style="--c:${MODS[o.m].color}" ${o.blocked || !o.n ? 'disabled' : ''}><b>${MODS[o.m].short}</b><small>${o.note}</small></button>`).join('')
+    + (canSwapUs(p) ? `<button type="button" class="wait swap" data-m="swap" style="--c:var(--laser)"><b>超音波改雷射</b></button>` : '')
     + `<button type="button" class="wait" data-m="wait"><b>先回候診區等</b></button>`;
+}
+// 超音波來不及：改做雷射（雷射 5 分鐘、不用你在旁邊）
+const canSwapUs = p => p.rem.includes('us') && !p.rem.includes('laser') && !p.done.includes('laser');
+function swapUs(p){
+  if (!canSwapUs(p)) return;
+  p.rem = p.rem.map(m => m === 'us' ? 'laser' : m);
+  p.rx = p.rx.map(m => m === 'us' ? 'laser' : m);
+  S.score -= 2;
+  msg(`${p.name} 的超音波改成雷射（-2 分）。`);
 }
 $('pkOpts').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || b.disabled || !PK || !S || S.over) return;
   const p = PK.p, m = b.dataset.m;
   leaveCoach();
   if (m === 'wait'){ S.sel = null; closePicker(); msg(`${p.name} 回候診區等空位。`); return; }
+  if (m === 'swap'){ swapUs(p); renderPicker(true); return; }
   if (S.lock) return busy();
   const free = S.st.find(s => s.m === m && !s.p && usable(s));
   if (!free) return renderPicker(true);
@@ -1531,7 +1544,7 @@ function renderCard(){
   }
   const st = S.st.find(s => s.p === p);
   const where = st ? st.label : '候診中';
-  const key = p.id + '|' + p.rem.join() + '|' + p.cut.join() + '|' + where;
+  const key = p.id + '|' + p.rem.join() + '|' + p.cut.join() + '|' + where + '|' + p.rx.join();
   if (card._key === key) return;
   card._key = key; card.className = 'rxcard';
   const chips = p.rx.map(m => {
@@ -1543,7 +1556,7 @@ function renderCard(){
     const c = p.cut.includes(m) ? 'cut' : p.done.includes(m) ? 'done' : (st && st.m === m) ? 'now' : '';
     return `<i class="${c}" style="--c:${MODS[m].color}">${MODS[m].short}</i>`;
   }).join('');
-  card.innerHTML = `<span class="av">${p.svg}</span><span class="nm"></span><span class="sym"></span><span class="rx">${chips}</span>`;
+  card.innerHTML = `<span class="av">${p.svg}</span><span class="nm"></span><span class="sym"></span><span class="rx">${chips}${canSwapUs(p) && !st ? '<button type="button" class="swapbtn" id="swapUs">超音波改雷射</button>' : ''}</span>`;
   const sy = card.querySelector('.sym'); sy.innerHTML = '<b>症狀</b> '; sy.append(p.sym);
   const nm = card.querySelector('.nm'); nm.textContent = p.name;
   const sm = document.createElement('small'); sm.textContent = `${p.no} 號・${p.dx}・${where}`; nm.appendChild(sm);
@@ -1571,7 +1584,7 @@ function render(){
   if (L){ setText($('lockLab'), `忙碌中：${L.label}`); $('lockBar').style.width = (clamp((S.t - L.start)/(L.end - L.start), 0, 1)*100) + '%'; }
   else if (S.coach && S.coach.p){
     if (lk.className !== 'lock on') lk.className = 'lock on';
-    setText($('lockLab'), `幫${S.coach.p.name}${MODS[S.coach.m].verb}・剩 ${Math.max(1, Math.ceil(S.coach.dur - S.coach.prog))} 分（點別的工作會先暫停）`);
+    setText($('lockLab'), `幫${S.coach.p.name}${MODS[S.coach.m].verb}・剩 ${Math.max(1, Math.ceil(S.coach.dur - S.coach.prog))} 分`);
     $('lockBar').style.width = (clamp(S.coach.prog / S.coach.dur, 0, 1)*100) + '%';
   }
   else setText($('lockLab'), '空檔中，可以安排病人');
@@ -1655,6 +1668,11 @@ $('room').addEventListener('click', e => {
     return msg(needHeat ? `等${MODS[st.m].short}的人都還沒熱敷。` : `候診區沒有人需要${MODS[st.m].name}。`);
   }
   assign(st, fits[0]);
+});
+$('rxcard').addEventListener('click', e => {
+  if (!e.target.closest('#swapUs') || !S || S.over) return;
+  const p = S.queue.find(q => q.id === S.sel) || S.peek;
+  if (p && S.queue.includes(p)) swapUs(p);
 });
 $('seats').addEventListener('click', e => {
   const el = e.target.closest('.seat'); if (!el || !el.dataset.id || !S || S.over) return;
