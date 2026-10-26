@@ -388,7 +388,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
           <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。<b>超音波</b>要你全程拿探頭打 5 分鐘。</li>
           <li><b>冰敷還是熱敷，由你判斷</b>：有紅、腫、熱、痛就冰敷，慢性痠痛就熱敷。牽引前要先熱敷，做過熱敷的人不做短波。</li>
           <li><b>機器嗶嗶</b>就點一下，再決定病人下一個去哪，也可以先回候診區等。熱敷、冰敷超時會受傷。</li>
-          <li><b>運動區</b>一次只能一個人：你示範完動作，病人自己做 10 分鐘。</li>
+          <li><b>運動區</b>一次只能一個人，要你親自帶 30 分鐘。去處理別的事時運動會暫停，記得點運動區回來繼續帶。</li>
           <li><b>突發狀況</b>：跳電、機器故障、主任巡房、長輩團報到……隨時可能發生。</li>
           <li><b>記得喝水、上廁所</b>：太渴擺位會變慢，膀胱滿了會忍不住衝去廁所。</li>
         </ol>
@@ -475,7 +475,7 @@ const MODS = {
   estim: { name:'電療',     short:'電療',   dur:15, setup:0.7, back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
   tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:1,   back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
   tracC: { name:'頸椎牽引', short:'拉脖子', dur:15, setup:0.8, back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
-  ex:    { name:'運動治療', short:'運動',   dur:10, setup:1,   back:1.5, color:'var(--gym)',   order:6, verb:'示範運動動作' },
+  ex:    { name:'運動治療', short:'運動',   dur:30, setup:0,   back:1.5, color:'var(--gym)',   order:6, verb:'帶運動治療', coach:true },
   laser: { name:'雷射',     short:'雷射',   dur:5,  setup:0.4, back:0.2, color:'var(--laser)', order:5, verb:'對準雷射' },
 };
 
@@ -496,13 +496,13 @@ const ZONES = [
 // metal = 體內有金屬植入物的機率（短波前會被問到）
 const SURNAMES = ['陳','林','黃','張','李','王','吳','劉','蔡','楊','許','鄭','謝','郭'];
 const PARTS = [
-  { part:'頸', dx:'脖子痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.15,ex:.15}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
-  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.15,ex:.2}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
-  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.4,estim:.7,laser:.45,sw:.35,us:.4,ex:.35}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
-  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.35,estim:.7,laser:.45,sw:.35,us:.35,ex:.4}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
-  { part:'踝', dx:'腳踝痛', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.35,ex:.25}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
-  { part:'肘', dx:'手肘痛',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.45,ex:.1}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
-  { part:'腕', dx:'手腕痛',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.4,ex:.1}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
+  { part:'頸', dx:'脖子痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.15,ex:.05}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
+  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.15,ex:.08}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
+  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.4,estim:.7,laser:.45,sw:.35,us:.4,ex:.15}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
+  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.35,estim:.7,laser:.45,sw:.35,us:.35,ex:.18}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
+  { part:'踝', dx:'腳踝痛', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.35,ex:.1}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
+  { part:'肘', dx:'手肘痛',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.45,ex:.04}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
+  { part:'腕', dx:'手腕痛',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.4,ex:.04}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
 ];
 const URGENT = { part:'頸', dx:'落枕', title:'先生', look:'man', pat:30, rx:['pack','estim','laser'] };
 // 症狀描述：有紅腫熱痛 → 該冰敷；慢性痠痛 → 該熱敷
@@ -749,7 +749,10 @@ function spawn(urgent, front, opts){
 }
 
 function effMult(){ return 1 + (S.stamina < 30 ? 0.5 : 0) + S.back/200 + (S.throat > 80 ? 0.25 : 0) + (S.bladder > 85 ? 0.25 : 0); }
-function setLock(label, dur, onDone){ S.lock = { label, start:S.t, end:S.t+dur, onDone }; S.sel = null; }
+function setLock(label, dur, onDone){
+  if (S.coach){ const c = S.coach; S.coach = null; if (c.p) msg(`先離開運動區，${c.p.name}在旁邊休息等你回來。`); }
+  S.lock = { label, start:S.t, end:S.t+dur, onDone }; S.sel = null;
+}
 function canDo(p, m){
   if (!p.rem.includes(remKey(m))) return false;
   if (MODS[m].needHeat && p.rem.includes('pack')) return false;
@@ -905,6 +908,15 @@ function startMod(st, p){
   beginMod(st, p);
 }
 function beginMod(st, p){
+  if (MODS[st.m].coach){
+    // 運動治療：治療師親自帶，只有在你待在運動區時才會前進
+    if (S.coach && S.coach !== st) S.coach = null;
+    st.p = p; st.on = true; st.start = S.t; st.dur = MODS[st.m].dur; st.doneAt = null; st.ot = false;
+    st.prog = 0; st.idle = 0; st.waitWarn = false;
+    S.lock = null; S.coach = st;
+    S.back = clamp(S.back + MODS[st.m].back, 0, 100);
+    return;
+  }
   const M = MODS[st.m], setup = M.setup * effMult();
   st.p = p; st.on = true; st.start = S.t + setup; st.dur = M.dur; st.doneAt = null; st.ot = false;
   S.back = clamp(S.back + M.back, 0, 100);
@@ -930,7 +942,7 @@ function completeStep(st){
   p.done.push(st.m);
   afterMod(st, p);
 }
-function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; }
+function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; st.prog = 0; if (S.coach === st) S.coach = null; }
 function afterMod(st, p){
   const bi = S.st.indexOf(st);
   clearSt(st);
@@ -1044,6 +1056,18 @@ function step(g){
   for (const st of S.st){
     if (!st.p || !st.on) continue;
     if (MODS[st.m].hands) continue;
+    if (MODS[st.m].coach){
+      if (S.coach === st && !S.lock){
+        st.prog += g / effMult();
+        S.back = clamp(S.back + 0.04*g, 0, 100); S.stamina = clamp(S.stamina - 0.06*g, 0, 100); S.throat = clamp(S.throat + 0.1*g, 0, 100);
+        st.idle = 0;
+        if (st.prog >= st.dur){ st.doneAt = S.t; S.coach = null; completeStep(st); }
+      } else {
+        st.idle += g;
+        if (st.idle > 8 && !st.waitWarn){ st.waitWarn = true; S.score -= 10; msg(`${st.p.name}在運動區等很久了：「老師～還要做嗎？」`, 'bad'); }
+      }
+      continue;
+    }
     if (st.doneAt == null && (st.broken || st.fault || (!S.power && ELECTRIC[st.m]))){
       st.start += g;
       if (st.fault && !st.faultWarn && S.t - st.faultAt > 4){ st.faultWarn = true; S.score -= 10; msg(`${st.p.name}：「欸～${st.fault === 'pad' ? '貼片' : '探頭'}掉很久了耶，還要做多久？」`, 'bad'); }
@@ -1245,6 +1269,12 @@ function renderRoom(){
       }
     }
     if (p && st.on && st.m === 'heat' && p.sleepy && !p.woke && state === 'run' && pct > 0.4) tm = `呼嚕zzz ${tm}`;
+    if (p && st.on && MODS[st.m].coach){
+      pct = clamp(st.prog / st.dur, 0, 1);
+      const left = Math.max(1, Math.ceil(st.dur - st.prog));
+      if (S.coach === st && !S.lock){ state = 'run'; tm = `帶運動中・剩 ${left} 分`; }
+      else { state = 'fault'; tm = `等你回來・剩 ${left} 分`; }
+    }
     if (st.fault && p){ state = 'fault'; tm = st.fault === 'pad' ? '貼片掉了！點我' : '探頭掉了！點我'; }
     else if (st.broken){ state += ' broken'; tm = '故障・點我修'; if (!p) nm = '故障'; }
     else if (!S.power && ELECTRIC[st.m] && !(p && st.doneAt != null)){ state += ' nopower'; tm = '跳電'; }
@@ -1356,6 +1386,11 @@ function render(){
   const lc = 'lock' + (L ? ' on' : '');
   if (lk.className !== lc) lk.className = lc;
   if (L){ setText($('lockLab'), `忙碌中：${L.label}`); $('lockBar').style.width = (clamp((S.t - L.start)/(L.end - L.start), 0, 1)*100) + '%'; }
+  else if (S.coach && S.coach.p){
+    if (lk.className !== 'lock on') lk.className = 'lock on';
+    setText($('lockLab'), `帶${S.coach.p.name}做運動・剩 ${Math.max(1, Math.ceil(S.coach.dur - S.coach.prog))} 分（點別的工作會先離開）`);
+    $('lockBar').style.width = (clamp(S.coach.prog / S.coach.dur, 0, 1)*100) + '%';
+  }
   else setText($('lockLab'), '空檔中，可以安排病人');
   meter('mBlad','bBlad', S.bladder);
   $('toiletBtn').setAttribute('aria-disabled', String(!!L));
@@ -1384,6 +1419,12 @@ function busy(){ msg(`你正在${S.lock.label}，分身乏術！`, 'bad'); }
 $('room').addEventListener('click', e => {
   const el = e.target.closest('.unit'); if (!el || !S || S.over) return;
   const st = S.st[+el.dataset.i];
+  if (st.p && st.on && MODS[st.m].coach){
+    if (S.coach === st) return msg(`你正在帶${st.p.name}做運動，還剩 ${Math.max(1, Math.ceil(st.dur - st.prog))} 分鐘。`);
+    if (S.lock) return busy();
+    S.coach = st; st.waitWarn = false;
+    return msg(`回到運動區，繼續帶${st.p.name}做運動。`, 'good');
+  }
   if (st.fault && st.p){
     if (S.lock) return busy();
     const q = st.p, pad = st.fault === 'pad';
