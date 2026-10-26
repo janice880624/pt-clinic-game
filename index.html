@@ -379,7 +379,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         <div class="shifts" id="shifts"></div>
         <ol class="howto">
           <li><b>安排床位</b>：點候診病人，再點發亮的床位。直接點空床，會自動排最等不及的人。</li>
-          <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。<b>超音波</b>要你全程拿探頭打 3 分鐘。</li>
+          <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。<b>超音波</b>要你全程拿探頭打 5 分鐘。</li>
           <li><b>冰敷還是熱敷，由你判斷</b>：有紅、腫、熱、痛就冰敷，慢性痠痛就熱敷。牽引前要先熱敷，做過熱敷的人不做短波。</li>
           <li><b>機器嗶嗶</b>就點一下，再決定病人下一個去哪，也可以先回候診區等。熱敷、冰敷超時會受傷。</li>
           <li><b>突發狀況</b>：跳電、機器故障、主任巡房、長輩團報到……隨時可能發生。</li>
@@ -463,7 +463,7 @@ const MODS = {
   heat:  { name:'熱敷',     short:'熱敷',   dur:15, setup:0.7, back:0.8, color:'var(--heat)',  order:1, verb:'包熱敷包' },
   pack:  { name:'冰敷或熱敷', short:'冷/熱敷', color:'var(--muted)', order:1, virtual:true },
   ice:   { name:'冰敷',     short:'冰敷',   dur:15, setup:0.7, back:0.6, color:'var(--ice)',   order:1, verb:'敷冰袋' },
-  us:    { name:'超音波',   short:'超音波', dur:3,  setup:0.3, back:0.4, color:'var(--us)',    order:2, verb:'抹凝膠、打超音波', hands:true },
+  us:    { name:'超音波',   short:'超音波', dur:5,  setup:0.3, back:0.4, color:'var(--us)',    order:2, verb:'抹凝膠、打超音波', hands:true },
   sw:    { name:'短波',     short:'短波',   dur:15, setup:0.7, back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
   estim: { name:'電療',     short:'電療',   dur:15, setup:0.7, back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
   tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:1,   back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
@@ -604,7 +604,7 @@ const INCIDENTS = [
       return `${st.label}突然沒反應${st.p ? `，${st.p.name}還躺在上面` : ''}。點它去修理`; } },
   { id:'water', title:'熱敷箱水位太低', ok:() => !S.heatLow,
     run(){ S.heatLow = true; return '熱敷包不夠熱，不能再排新的熱敷。點空的熱敷床去補水加熱'; } },
-  { id:'bus', title:'社區據點的長輩到了', ok:() => S.t < S.end - 40,
+  { id:'bus', title:'社區據點的長輩到了', ok:() => S.t < S.end - 40 && S.arrived <= MAX_PATIENTS - 4,
     run(){ for (let i = 0; i < 4; i++) spawn(false, false, { senior:true }); return '一台小巴載來 4 位阿公阿嬤，候診區一下子滿了'; } },
   { id:'desk', title:'櫃台系統當機', ok:() => S.t < S.end - 40 && !S.deskDownUntil,
     run(){ S.deskDownUntil = S.t + 8; S.deskBacklog = 0; return '健保卡讀不到，病人都卡在櫃台。等等系統好了會一次湧進來'; } },
@@ -684,7 +684,8 @@ function pick(arr, wf){ const tot = arr.reduce((s,x) => s + wf(x), 0); let r = M
 function genRx(rx, acute){
   rx = { ...rx };
   if ('heat' in rx){ rx.pack = rx.heat; delete rx.heat; }
-  if (acute){ delete rx.tracL; delete rx.tracC; delete rx.sw; rx.pack = 0.95; }
+  // 急性期（紅腫熱痛）：冷熱敷、一定安排雷射，不做牽引、短波、超音波
+  if (acute){ delete rx.tracL; delete rx.tracC; delete rx.sw; delete rx.us; rx.pack = 0.95; rx.laser = 1; }
   const ent = Object.entries(rx).sort((a,b) => b[1]-a[1]);
   let got = ent.filter(([,pr]) => Math.random() < pr).map(([m]) => m);
   for (const [m] of ent){ if (got.length >= 2) break; if (!got.includes(m)) got.push(m); }
@@ -693,15 +694,19 @@ function genRx(rx, acute){
   if (got.includes('pack') && got.includes('sw')){
     if (hasTrac || Math.random() < 0.5) got = got.filter(m => m !== 'sw'); else got = got.filter(m => m !== 'pack');
   }
-  for (const m of ['estim', 'laser']){ if (got.length >= 2) break; if (!got.includes(m)) got.push(m); }
+  // 超音波、雷射擇一
+  if (got.includes('us') && got.includes('laser')){ const drop = Math.random() < 0.5 ? 'us' : 'laser'; got = got.filter(m => m !== drop); }
+  for (const m of ['estim', 'laser']){ if (got.length >= 2) break; if (!got.includes(m) && !(m === 'laser' && got.includes('us'))) got.push(m); }
   while (got.length > 4){
-    const removable = got.filter(m => !(hasTrac && (m === 'pack' || MODS[m].needHeat)));
+    const removable = got.filter(m => !(hasTrac && (m === 'pack' || MODS[m].needHeat)) && !(acute && m === 'laser'));
     got.splice(got.indexOf(removable[Math.floor(Math.random()*removable.length)]), 1);
   }
   return got.sort(byOrder);
 }
 const remKey = m => (m === 'heat' || m === 'ice') ? 'pack' : m;
+const MAX_PATIENTS = 45; // 每一診最多來診人數
 function spawn(urgent, front, opts){
+  if (S.arrived >= MAX_PATIENTS) return;
   const sur = SURNAMES[Math.floor(Math.random()*SURNAMES.length)];
   let p, metal = 0;
   if (urgent){
