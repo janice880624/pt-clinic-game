@@ -292,7 +292,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .fb .fx{display:block;margin-top:4px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
 .card.note{border:3px solid var(--bad)}
 .note .who{color:var(--bad)}
-.note .lede{color:var(--ink);font-size:14px;line-height:1.6}
+.note .lede{color:var(--ink);font-size:14px;line-height:1.6;white-space:pre-line}
 .btn{border:0;background:var(--brand);color:var(--brand-ink);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 .btn.ghost{background:var(--panel2);color:var(--ink);border:1.5px solid var(--line)}
 .btns{display:flex;gap:8px}
@@ -754,8 +754,9 @@ function assign(st, p){
   S.sel = null; S.peek = p;
   startMod(st, p);
   callNumber(p, st);
-  if (st.m === 'heat' || st.m === 'ice') judgePack(p, st.m);
-  st.walkUntil = performance.now() + walk(p, [...from, ...toBed(i, G)]);
+  let target = st;
+  if (st.m === 'heat' || st.m === 'ice'){ const fix = judgePack(p, st); if (fix) target = fix.to; }
+  if (target) target.walkUntil = performance.now() + walk(p, [...from, ...toBed(S.st.indexOf(target), G)]);
 }
 
 /* ---------- 走路動畫與叫號 ---------- */
@@ -831,21 +832,33 @@ function layoutHall(){
   const hv = $('hallV'); hv.style.top = (dTop - 14) + 'px'; hv.style.height = (top + h - dTop + 14) + 'px';
   const ld = $('ldoor'); ld.style.top = (G.doorY - lob.y - 4 - 14) + 'px'; ld.style.left = '-5px';
 }
-function judgePack(p, m){
-  const right = p.inflamed ? 'ice' : 'heat';
+// 判斷冷熱敷；放錯時扣分、說明，並自動改排到正確的床位（客滿就先回候診區）
+function judgePack(p, st){
+  const m = st.m, right = p.inflamed ? 'ice' : 'heat';
   if (m === right){
     S.score += 5; S.judgeOk = (S.judgeOk || 0) + 1;
     msg(p.inflamed ? `判斷正確！${p.name}有紅腫熱痛，先冰敷。` : `判斷正確！${p.name}是慢性痠痛，熱敷放鬆。`, 'good');
-    return;
+    return null;
   }
   S.judgeBad = (S.judgeBad || 0) + 1;
-  if (m === 'heat'){
-    S.score -= 20; S.incidents++;
-    showNotice('冷熱敷判斷錯誤', `${p.name}「${p.sym}」，有紅腫熱痛應該冰敷，熱敷會更腫更痛。`);
+  S.score -= m === 'heat' ? 15 : 8;
+  const why = m === 'heat'
+    ? `${p.name}「${p.sym}」，有紅腫熱痛應該冰敷，熱敷會更腫更痛。`
+    : `${p.name}「${p.sym}」，沒有紅腫熱痛，慢性痠痛熱敷比較適合。`;
+  // 取消放錯的床位
+  clearSt(st); S.lock = null;
+  const free = S.st.find(s => s.m === right && !s.p && usable(s));
+  let fix;
+  if (free){
+    startMod(free, p); callNumber(p, free);
+    fix = `已經幫你改排到${free.label}。`;
   } else {
-    S.score -= 8;
-    showNotice('冷熱敷判斷錯誤', `${p.name}「${p.sym}」，沒有紅腫熱痛，慢性痠痛熱敷比較適合。`);
+    p.patience = Math.max(p.patience, 75);
+    S.queue.unshift(p);
+    fix = `${MODS[right].name}床目前都滿了，先請${p.name}回候診區等空床。`;
   }
+  showNotice('冷熱敷判斷錯誤', `${why}\n${fix}`);
+  return { to: free || null };
 }
 // 需要按「我知道了」才關閉，期間遊戲暫停
 function showNotice(title, desc){
