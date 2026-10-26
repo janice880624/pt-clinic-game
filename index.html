@@ -90,9 +90,11 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   background-image:linear-gradient(var(--tile) 1px,transparent 1px),linear-gradient(90deg,var(--tile) 1px,transparent 1px);
   background-size:20px 20px;display:flex;flex-direction:column;gap:26px}
 .room-sign{position:absolute;top:-11px;left:14px;background:var(--wall);color:var(--floor);font-family:var(--f-disp);font-size:12px;padding:1px 10px;border-radius:4px;letter-spacing:.1em}
-.row{display:flex;gap:16px;min-height:0;position:relative;z-index:1}
+/* 上下兩排共用同一組欄寬，各區的左右邊界會對齊 */
+.row{display:grid;grid-template-columns:minmax(174px,174fr) minmax(230px,230fr) minmax(118px,118fr) minmax(72px,72fr);column-gap:15px;min-height:0;position:relative;z-index:1}
+.row > .zone,.row > .stack{min-width:0}
 .row.r1{flex:none}.row.r2{flex:1}
-.stack{display:flex;flex-direction:column;gap:16px;flex:1 1 auto;min-width:0}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
 .stack .zone{flex:1 1 auto}
 .zone{--zc:var(--muted);flex:1 1 auto;min-width:0;position:relative;padding:18px 3px 4px;border-radius:5px;display:flex;align-items:center;justify-content:center;
   border:2px dashed color-mix(in srgb,var(--zc) 45%,transparent);background:color-mix(in srgb,var(--zc) 5%,transparent)}
@@ -160,17 +162,17 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .unit.frozen .boom{background:#1d6f86}
 .laundry{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;padding:20px 4px 4px;--zc:var(--wall)}
 .lrow{display:flex;gap:4px;align-items:flex-start;justify-content:center}
-.washer{position:relative;width:34px;height:40px;flex:none;border:1.5px solid var(--line);border-radius:5px;background:var(--bed);padding:0;cursor:pointer;box-shadow:0 2px 0 var(--line)}
+.washer{position:relative;width:30px;height:40px;flex:none;border:1.5px solid var(--line);border-radius:5px;background:var(--bed);padding:0;cursor:pointer;box-shadow:0 2px 0 var(--line)}
 .washer::before{content:"";position:absolute;left:3px;right:3px;top:3px;height:4px;border-radius:2px;background:var(--panel2)}
 .washer::after{content:"";position:absolute;right:5px;top:3px;width:4px;height:4px;border-radius:50%;background:var(--line)}
-.wm-door{position:absolute;left:50%;top:11px;width:22px;height:22px;margin-left:-11px;border-radius:50%;border:2.5px solid var(--muted);background:var(--panel2);box-sizing:border-box}
+.wm-door{position:absolute;left:50%;top:12px;width:20px;height:20px;margin-left:-10px;border-radius:50%;border:2.5px solid var(--muted);background:var(--panel2);box-sizing:border-box}
 .washer.on .wm-door{border-color:var(--ice);background:conic-gradient(color-mix(in srgb,var(--ice) 65%,var(--bed)) 0 25%,var(--bed) 0 50%,color-mix(in srgb,var(--ice) 65%,var(--bed)) 0 75%,var(--bed) 0);animation:spin .7s linear infinite}
 .washer.on{animation:wobble .35s ease-in-out infinite alternate}
 .washer.on::after{background:var(--good)}
 .washer.ready{border-color:var(--warn)}
 .washer em{position:absolute;left:-6px;right:-6px;top:41px;font-style:normal;font-size:10px;line-height:1.2;text-align:center;color:var(--muted);white-space:nowrap}
 .washer.on em{color:var(--ice);font-weight:700}
-.towels{display:grid;grid-template-columns:repeat(3,11px);gap:2px;align-content:start;min-height:40px;width:37px}
+.towels{display:grid;grid-template-columns:repeat(2,11px);gap:2px;align-content:start;min-height:40px;width:24px}
 .towels i{width:11px;height:9px;border-radius:2px;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--heat) 50%,var(--line));
   background:linear-gradient(135deg,var(--bed) 44%,color-mix(in srgb,var(--heat) 30%,var(--bed)) 44% 56%,var(--bed) 56%)}
 .towels b{grid-column:1/-1;font-size:9.5px;line-height:1.2;color:var(--muted);font-weight:700;white-space:nowrap}
@@ -555,28 +557,28 @@ const MODS = {
 
 // 治療室分區：n = 床位數；cols = 每排幾個；row = 放上排(1)或下排(2)
 const ZONES = [
-  { m:'heat',  name:'熱敷區',   n:3, cols:3, row:1, furn:'bed',   label:'熱敷床', stack:'hc' },
-  { m:'ice',   name:'冰敷區',   n:3, cols:3, row:1, furn:'bed',   label:'冰敷床', stack:'hc' },
-  { m:'estim', name:'電療區',   n:8, cols:4, row:1, furn:'bed',   label:'電療床' },
-  { m:'us',    name:'超音波',   n:1, cols:1, row:1, furn:'bed',   label:'超音波', stack:'sx' },
-  { m:'sw',    name:'短波區',   n:2, cols:2, row:1, furn:'bed',   label:'短波', stack:'sx' },
-  { m:'ex',    name:'徒手區',   n:1, cols:1, row:1, furn:'bed',   label:'徒手床', stack:'xl' },
-  { m:'tracL', name:'拉腰區',   n:3, cols:3, row:2, furn:'long',  label:'腰椎牽引床' },
-  { m:'tracC', name:'拉脖子區', n:3, cols:3, row:2, furn:'chair', label:'頸椎牽引椅' },
-  { m:'laser', name:'雷射區',   n:4, cols:4, row:2, furn:'chair', label:'雷射' },
+  { m:'heat',  name:'熱敷區',   n:3, cols:3, row:1, gc:'1', furn:'bed',   label:'熱敷床', stack:'hc' },
+  { m:'ice',   name:'冰敷區',   n:3, cols:3, row:1, gc:'1', furn:'bed',   label:'冰敷床', stack:'hc' },
+  { m:'estim', name:'電療區',   n:8, cols:4, row:1, gc:'2', furn:'bed',   label:'電療床' },
+  { m:'us',    name:'超音波',   n:1, cols:1, row:1, gc:'3', furn:'bed',   label:'超音波', stack:'sx' },
+  { m:'sw',    name:'短波區',   n:2, cols:2, row:1, gc:'3', furn:'bed',   label:'短波', stack:'sx' },
+  { m:'ex',    name:'徒手區',   n:1, cols:1, row:1, gc:'4', furn:'bed',   label:'徒手床', stack:'xl' },
+  { m:'tracL', name:'拉腰區',   n:3, cols:3, row:2, gc:'1',     furn:'long',  label:'腰椎牽引床' },
+  { m:'laser', name:'雷射區',   n:4, cols:4, row:2, gc:'2',     furn:'chair', label:'雷射' },
+  { m:'tracC', name:'拉脖子區', n:3, cols:3, row:2, gc:'3 / 5', furn:'chair', label:'頸椎牽引椅' },
 ];
 
 // 病人：people = [稱呼, 最多等幾分鐘, 頭像造型]；rx = 每項治療開立的機率（保證 2–4 項；有牽引一定有熱敷）
 // metal = 體內有金屬植入物的機率（短波前會被問到）
 const SURNAMES = ['陳','林','黃','張','李','王','吳','劉','蔡','楊','許','鄭','謝','郭'];
 const PARTS = [
-  { part:'頸', dx:'脖子痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.15,ex:.15}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
-  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.15,ex:.2}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
-  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.4,estim:.7,laser:.45,sw:.35,us:.4,ex:.3}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
-  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.35,estim:.7,laser:.45,sw:.35,us:.35,ex:.3}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
-  { part:'踝', dx:'腳踝痛', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.35,ex:.15}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
-  { part:'肘', dx:'手肘痛',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.45,ex:.15}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
-  { part:'腕', dx:'手腕痛',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.4,ex:.15}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
+  { part:'頸', dx:'脖子痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.15,ex:.07}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
+  { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.15,ex:.1}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
+  { part:'肩', dx:'肩膀痛',   people:[['阿姨',55,'auntie'],['同學',35,'student']], rx:{heat:.4,estim:.7,laser:.45,sw:.35,us:.4,ex:.15}, acute:.12, acuteDx:'肩膀急性拉傷', metal:.05, w:{am:3,pm:2,eve:1} },
+  { part:'膝', dx:'膝蓋痛',   people:[['阿嬤',60,'granny'],['阿公',60,'grandpa'],['大哥',45,'man']], rx:{heat:.35,estim:.7,laser:.45,sw:.35,us:.35,ex:.15}, acute:.15, acuteDx:'膝蓋扭傷', metal:.4, w:{am:3,pm:2,eve:1} },
+  { part:'踝', dx:'腳踝痛', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.35,ex:.07}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
+  { part:'肘', dx:'手肘痛',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.45,ex:.07}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
+  { part:'腕', dx:'手腕痛',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.4,ex:.07}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
 ];
 const URGENT = { part:'頸', dx:'落枕', title:'先生', look:'man', pat:30, rx:['pack','estim','laser'] };
 // 症狀描述：有紅腫熱痛 → 該冰敷；慢性痠痛 → 該熱敷
@@ -744,7 +746,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v3'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v4'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -1362,9 +1364,9 @@ function buildRoom(){
     const row = $('row' + z.row);
     if (z.stack){
       let col = row.querySelector(`.stack[data-s="${z.stack}"]`);
-      if (!col){ col = document.createElement('div'); col.className = 'stack'; col.dataset.s = z.stack; row.appendChild(col); }
+      if (!col){ col = document.createElement('div'); col.className = 'stack'; col.dataset.s = z.stack; col.style.gridColumn = z.gc; row.appendChild(col); }
       col.appendChild(zEl);
-    } else row.appendChild(zEl);
+    } else { zEl.style.gridColumn = z.gc; row.appendChild(zEl); }
   });
   // 洗衣區：和徒手區共用最右邊一欄
   const col = document.querySelector('.stack[data-s="xl"]');
@@ -1397,8 +1399,8 @@ function renderLaundry(){
   w.classList.toggle('on', !!S.washer);
   w.classList.toggle('ready', !S.washer && S.dirty > 0);
   setText($('wmLab'), S.washer ? `洗 ${wm}分` : S.dirty ? `髒 ${S.dirty}` : '空');
-  const n = S.towels, show = Math.min(n, 9);
-  $('towelStack').innerHTML = Array.from({ length:show }, () => '<i></i>').join('') + (n > 9 ? `<b>+${n - 9}</b>` : '') + (n === 0 ? '<b>沒毛巾</b>' : '');
+  const n = S.towels, show = Math.min(n, 8);
+  $('towelStack').innerHTML = Array.from({ length:show }, () => '<i></i>').join('') + (n > 8 ? `<b>+${n - 8}</b>` : '') + (n === 0 ? '<b>沒毛巾</b>' : '');
   const lw = $('lWash'), lf = $('lFold');
   setText(lw, S.washer ? '洗衣中' : `洗 ${S.dirty}`);
   setText(lf, `折 ${S.toFold}`);
