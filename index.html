@@ -290,6 +290,9 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .fb.good{border-left-color:var(--good)}
 .fb.bad{border-left-color:var(--bad)}
 .fb .fx{display:block;margin-top:4px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.card.note{border:3px solid var(--bad)}
+.note .who{color:var(--bad)}
+.note .lede{color:var(--ink);font-size:14px;line-height:1.6}
 .btn{border:0;background:var(--brand);color:var(--brand-ink);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 .btn.ghost{background:var(--panel2);color:var(--ink);border:1.5px solid var(--line)}
 .btns{display:flex;gap:8px}
@@ -393,6 +396,15 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       <div class="choices" id="evChoices"></div>
       <div class="fb" id="evFb" hidden></div>
       <button class="btn" id="evGo" type="button" hidden>繼續看診</button>
+    </div>
+  </div>
+
+  <div class="ov ev" id="noteOv" hidden>
+    <div class="card note">
+      <div class="who" id="noteK">判斷錯誤</div>
+      <p class="say" id="noteT"></p>
+      <p class="lede" id="noteD"></p>
+      <button class="btn" id="noteOk" type="button">我知道了</button>
     </div>
   </div>
 
@@ -663,7 +675,7 @@ function newGame(key){
   buildRoom();
   spawn(); spawn(); if (key === 'am') spawn();
   msg(`${sh.name}開診！候診區已經有人在等了。`);
-  ['startOv','endOv','pauseOv','evOv'].forEach(id => $(id).hidden = true);
+  ['startOv','endOv','pauseOv','evOv','noteOv'].forEach(id => $(id).hidden = true);
 }
 
 function pick(arr, wf){ const tot = arr.reduce((s,x) => s + wf(x), 0); let r = Math.random()*tot; for (const x of arr){ r -= wf(x); if (r < 0) return x; } return arr[0]; }
@@ -824,12 +836,24 @@ function judgePack(p, m){
   S.judgeBad = (S.judgeBad || 0) + 1;
   if (m === 'heat'){
     S.score -= 20; S.incidents++;
-    showAlert('冷熱敷判斷錯誤', `${p.name}「${p.sym}」，有紅腫熱痛應該冰敷，熱敷會更腫更痛`, '判斷錯誤');
+    showNotice('冷熱敷判斷錯誤', `${p.name}「${p.sym}」，有紅腫熱痛應該冰敷，熱敷會更腫更痛。`);
   } else {
     S.score -= 8;
-    showAlert('冷熱敷判斷錯誤', `${p.name}「${p.sym}」，沒有紅腫熱痛，慢性痠痛熱敷比較適合`, '判斷錯誤');
+    showNotice('冷熱敷判斷錯誤', `${p.name}「${p.sym}」，沒有紅腫熱痛，慢性痠痛熱敷比較適合。`);
   }
 }
+// 需要按「我知道了」才關閉，期間遊戲暫停
+function showNotice(title, desc){
+  if (modal){ pendingEv.push(['notice', { title, desc }]); return; }
+  modal = { notice:true };
+  $('noteT').textContent = title; $('noteD').textContent = desc;
+  $('noteOv').hidden = false;
+  $('noteOk').focus({ preventScroll:true });
+}
+$('noteOk').addEventListener('click', () => {
+  $('noteOv').hidden = true; modal = null;
+  if (pendingEv.length){ const [e, c] = pendingEv.shift(); e === 'notice' ? showNotice(c.title, c.desc) : openEvent(e, c); }
+});
 function showAlert(title, desc, kicker){
   $('alertK').textContent = kicker || '突發狀況';
   $('alertT').textContent = title; $('alertD').textContent = desc;
@@ -1087,7 +1111,7 @@ function closeEvent(){
   const wasRandom = !modal.ctx;
   modal = null; $('evOv').hidden = true;
   if (wasRandom) S.nextEvt = S.t + rand(22, 38);
-  if (pendingEv.length){ const [e, c] = pendingEv.shift(); openEvent(e, c); }
+  if (pendingEv.length){ const [e, c] = pendingEv.shift(); e === 'notice' ? showNotice(c.title, c.desc) : openEvent(e, c); }
 }
 function applyFx(fx){
   if (!fx) return;
