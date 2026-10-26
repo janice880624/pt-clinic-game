@@ -459,14 +459,14 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         </div>
         <div class="shifts" id="shifts"></div>
         <ol class="howto">
-          <li><b>安排床位</b>：點候診病人，再點發亮的床位。直接點空床，會自動排最等不及的人。</li>
-          <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。</li>
-          <li><b>冰敷還是熱敷，由你判斷</b>：有紅、腫、熱、痛就冰敷，慢性痠痛就熱敷。牽引前要先熱敷，做過熱敷的人不做短波。熱敷要用乾淨毛巾，用過的記得洗、洗好記得折。</li>
-          <li><b>機器嗶嗶</b>就點一下，再決定病人下一個去哪，也可以先回候診區等。熱敷、冰敷超時會受傷。</li>
-          <li><b>超音波</b>和<b>徒手治療</b>（各 5 分鐘）要你親自做，一次只能顧一床。去處理別的事時會暫停，記得點床位回來繼續。</li>
-          <li><b>整點準時下班</b>：下班前 1 小時停止掛號，時間到還沒做完的病人每位扣 20 分。</li>
-          <li><b>突發狀況</b>：跳電、機器故障、主任巡房、長輩團報到……隨時可能發生。</li>
-          <li><b>記得喝水、上廁所</b>：太渴擺位會變慢，膀胱滿了會忍不住衝去廁所。</li>
+          <li><b>安排床位</b>：點病人，再點發亮的床位；直接點空床會排最等不及的人。</li>
+          <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶時不能做別的事。</li>
+          <li><b>冰敷還是熱敷，由你判斷</b>：有紅腫熱痛冰敷，慢性痠痛熱敷。熱敷要用乾淨毛巾，記得洗、折。</li>
+          <li><b>牽引</b>：要先熱敷，熱敷完馬上牽引，中間不能插別的項目；做過熱敷不做短波。</li>
+          <li><b>機器嗶嗶</b>就點一下，決定下一站或先回候診區。冷熱敷超時會受傷。</li>
+          <li><b>超音波、徒手</b>（各 5 分鐘）要你親自做，離開就暫停，點床位回來繼續。</li>
+          <li><b>整點下班</b>：最後 1 小時停止掛號，沒做完的治療每項扣 10 分。</li>
+          <li><b>突發狀況、喝水、上廁所</b>：跳電、主任巡房隨時會來；太渴、太急都會出事。</li>
         </ol>
       </div>
     </div>
@@ -750,7 +750,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v4'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v5'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -811,6 +811,8 @@ function genRx(rx, acute, rng = RNG.pat){
     if (hasTrac || rng() < 0.5) got = got.filter(m => m !== 'sw'); else got = got.filter(m => m !== 'pack');
   }
   // 超音波、雷射擇一
+  // 超音波、徒手擇一
+  if (got.includes('us') && got.includes('ex')){ const drop = rng() < 0.5 ? 'us' : 'ex'; got = got.filter(m => m !== drop); }
   if (got.includes('us') && got.includes('laser')){ const drop = rng() < 0.5 ? 'us' : 'laser'; got = got.filter(m => m !== drop); }
   for (const m of ['estim', 'laser']){ if (got.length >= 2) break; if (!got.includes(m) && !(m === 'laser' && got.includes('us'))) got.push(m); }
   while (got.length > 4){
@@ -867,12 +869,16 @@ function setLock(label, dur, onDone){
   leaveCoach();
   S.lock = { label, start:S.t, end:S.t+dur, onDone }; S.sel = null;
 }
-function canDo(p, m){
-  if (!p.rem.includes(remKey(m))) return false;
-  if (MODS[m].needHeat && p.rem.includes('pack')) return false;
-  if (m === 'sw' && p.done.includes('heat')) return false;
-  return true;
+// 熱敷做完、還沒牽引：下一站只能是牽引（中間不能插別的項目）
+const tracPending = p => !p.rem.includes('pack') && p.rem.some(m => MODS[m] && MODS[m].needHeat);
+function blockReason(p, m){
+  if (!p.rem.includes(remKey(m))) return 'none';
+  if (MODS[m].needHeat && p.rem.includes('pack')) return 'needHeat';
+  if (m === 'sw' && p.done.includes('heat')) return 'swAfterHeat';
+  if (tracPending(p) && !MODS[m].needHeat) return 'tracFirst';
+  return '';
 }
+function canDo(p, m){ return blockReason(p, m) === ''; }
 const TOWEL_START = 6; // 開診時折好的乾淨毛巾
 function usable(st){ return !st.broken && !(st.m === 'heat' && (S.heatLow || S.towels <= 0)) && !(!S.power && ELECTRIC[st.m]); }
 function valid(st, p){ return !st.p && usable(st) && canDo(p, st.m); }
@@ -1103,7 +1109,7 @@ function renderPicker(force){
   if (S.over || !S.queue.includes(p) || S.sel !== p.id){ closePicker(); return; }
   const opts = p.rem.flatMap(m => m === 'pack' ? ['heat', 'ice'] : [m]).map(m => {
     const n = freeCount(m), blocked = !canDo(p, m);
-    return { m, n, blocked, note: blocked ? (m === 'sw' ? '做過熱敷' : '要先熱敷') : n ? `空床 ${n}` : (m === 'heat' && S.towels <= 0 ? '沒毛巾' : '客滿') };
+    return { m, n, blocked, note: blocked ? ({ swAfterHeat:'做過熱敷', tracFirst:'先去牽引', needHeat:'要先熱敷' }[blockReason(p, m)] || '不能做') : n ? `空床 ${n}` : (m === 'heat' && S.towels <= 0 ? '沒毛巾' : '客滿') };
   }).sort((a,b) => byOrder(a.m, b.m));
   const key = opts.map(o => o.m + o.note).join('|') + (S.lock ? 'L' : '');
   if (!force && key === PK.key) return;
@@ -1313,8 +1319,9 @@ function finish(reason){
   closePicker();
   S.over = true; Music.stop();
   const ot = Math.max(0, Math.round(S.t - S.end));
-  const left = S.queue.length + S.st.filter(s => s.p).length;
-  const final = S.score - left * 20;
+  const leftPts = [...new Set([...S.queue, ...S.st.filter(s => s.p).map(s => s.p)])];
+  const left = leftPts.length, leftItems = leftPts.reduce((n, p) => n + p.rem.length, 0);
+  const final = S.score - leftItems * 10;
   const ratio = final / Math.max(1, S.arrived * 65);
   let G = GRADES.find(x => ratio >= x.min);
   if (reason === 'back') G = GRADES[GRADES.length - 1];
@@ -1330,11 +1337,11 @@ function finish(reason){
   $('endScale').innerHTML = GRADES.map(x => `<span class="${x.g === G.g ? 'me' : ''}">${x.g}</span>`).join('');
   const cells = [
     ['完成治療', `${S.served}/${S.arrived}`], ['客訴', S.complaints + ' 件'], ['異常事件', S.incidents + ' 件'],
-    ['沒做完', left + ' 人'], ['憋到衝廁所', S.toiletRush + ' 次'], ['分數', final],
+    ['沒做完', leftItems + ' 項'], ['憋到衝廁所', S.toiletRush + ' 次'], ['分數', final],
   ];
   $('endSum').innerHTML = cells.map(([a,b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
   const notes = [];
-  if (left) notes.push(`${left} 位病人沒做完，每位扣 20 分。`);
+  if (leftItems) notes.push(`${left} 位病人還有 ${leftItems} 項治療沒做完，每項扣 10 分。`);
   if (S.incidents) notes.push(`有 ${S.incidents} 件異常事件要寫報告。`);
   if (S.judgeOk || S.judgeBad) notes.push(`冷熱敷判斷：對 ${S.judgeOk || 0} 次、錯 ${S.judgeBad || 0} 次。`);
   if (!notes.length) notes.push('病人全部做完，準時打卡。');
@@ -1637,7 +1644,9 @@ $('room').addEventListener('click', e => {
   if (p){
     if (!p.rem.includes(remKey(st.m))) return msg(`${p.name} 的處方沒有${remKey(st.m) === 'pack' ? '冰敷或熱敷' : MODS[st.m].name}。`, 'bad');
     if (st.m === 'sw' && p.done.includes('heat')) return msg(`${p.name} 已經做過熱敷，不再做短波。`, 'bad');
-    if (!canDo(p, st.m)) return msg(`${p.name} 要先熱敷才能${MODS[st.m].short}。`, 'bad');
+    const why = blockReason(p, st.m);
+    if (why === 'tracFirst') return msg(`${p.name} 熱敷完要直接去${p.rem.filter(m => MODS[m] && MODS[m].needHeat).map(m => MODS[m].short).join('、')}，中間不能先做別的。`, 'bad');
+    if (why) return msg(`${p.name} 要先熱敷才能${MODS[st.m].short}。`, 'bad');
     return assign(st, p);
   }
   const fits = S.queue.filter(q => valid(st, q)).sort((a,b) => a.patience - b.patience);
