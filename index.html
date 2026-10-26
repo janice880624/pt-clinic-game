@@ -1657,14 +1657,31 @@ $('legend').innerHTML = ZONES.map(z => `<span class="chip" style="--c:${MODS[z.m
 /* ---------- 背景音樂（Web Audio 即時合成，原創旋律） ---------- */
 const Music = (() => {
   const mid = n => 440 * Math.pow(2, (n - 69) / 12);
-  // 8 小節 × 8 個八分音符；null = 休止
-  const LEAD = [
-    72,null,76,79, 76,null,72,74,   76,null,72,69, 72,null,null,null,
-    69,null,72,77, 76,74,72,null,   74,null,71,67, 74,null,null,null,
-    72,null,76,79, 81,79,76,null,   76,null,74,72, 69,null,72,null,
-    74,null,77,74, 72,null,69,null, 71,null,74,79, 77,null,74,null,
-  ];
-  const ROOTS = [48,45,41,43,48,45,50,43]; // C Am F G C Am Dm G
+  // 三個班別各一首原創曲：8 小節 × 8 個八分音符；null = 休止
+  const SONGS = {
+    // 早診：輕快、有朝氣（C 大調）
+    am: { bpm:116, rush:140, wave:'square', vol:0.16, len:1.6, style:'pop',
+      lead:[ 72,null,76,79, 76,null,72,74,   76,null,72,69, 72,null,null,null,
+             69,null,72,77, 76,74,72,null,   74,null,71,67, 74,null,null,null,
+             72,null,76,79, 81,79,76,null,   76,null,74,72, 69,null,72,null,
+             74,null,77,74, 72,null,69,null, 71,null,74,79, 77,null,74,null ],
+      roots:[48,45,41,43,48,45,50,43] },   // C Am F G C Am Dm G
+    // 午診：慵懶、慢悠悠（F 大調）
+    pm: { bpm:88, rush:118, wave:'triangle', vol:0.3, len:2.6, style:'lazy',
+      lead:[ 69,null,null,72, 74,null,72,null, 69,null,65,null, 67,null,null,null,
+             70,null,69,67, 65,null,67,null, 72,null,null,null, null,null,null,null,
+             69,null,72,77, 76,null,74,null, 72,null,69,null, 64,null,null,null,
+             65,null,67,69, 70,null,74,null, 72,null,70,null, 67,null,null,null ],
+      roots:[41,38,46,48,41,45,46,48] },   // F Dm Bb C F Am Bb C
+    // 晚診：下班人潮、節奏緊湊（A 小調）
+    eve: { bpm:132, rush:156, wave:'square', vol:0.13, len:0.9, style:'drive',
+      lead:[ 76,76,null,74, 72,null,74,76,   77,null,76,74, 72,null,null,null,
+             72,72,null,74, 76,null,79,null, 79,null,77,76, 74,null,null,null,
+             81,null,79,76, 74,76,null,72,   77,null,76,null, 74,null,72,null,
+             71,null,74,null, 79,null,77,null, 76,null,80,null, 76,null,71,null ],
+      roots:[45,41,48,43,45,41,43,40] },   // Am F C G Am F G E
+  };
+  let curKey = 'am';
   let ctx = null, master = null, noise = null, timer = null, playing = false, nextT = 0, step = 0;
   let on = true;
   try { on = localStorage.getItem('ptMusic') !== 'off'; } catch (e) {}
@@ -1693,16 +1710,27 @@ const Music = (() => {
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
     src.connect(f); f.connect(g); g.connect(master); src.start(t);
   }
-  function bpm(){ return (typeof S !== 'undefined' && S && S.t < S.rushUntil) ? 140 : 116; }
   function sched(){
+    const key = (typeof S !== 'undefined' && S && SONGS[S.key]) ? S.key : 'am';
+    if (key !== curKey){ curKey = key; step = 0; }
+    const song = SONGS[key], rush = typeof S !== 'undefined' && S && S.t < S.rushUntil;
     while (nextT < ctx.currentTime + 0.15){
-      const e = 60 / bpm() / 2, i = step % 64, bar = Math.floor(i / 8), k = i % 8;
-      const n = LEAD[i];
-      if (n) tone('square', mid(n), nextT, e * 1.6, 0.16);
-      const r = ROOTS[bar];
-      if (k === 0 || k === 4) tone('triangle', mid(r), nextT, e * 1.8, 0.5);
-      if (k === 6) tone('triangle', mid(r + 7), nextT, e * 0.9, 0.35);
-      if (k % 2 === 1) hat(nextT, 0.12);
+      const e = 60 / (rush ? song.rush : song.bpm) / 2, i = step % 64, bar = Math.floor(i / 8), k = i % 8;
+      const n = song.lead[i];
+      if (n) tone(song.wave, mid(n), nextT, e * song.len, song.vol);
+      const r = song.roots[bar];
+      if (song.style === 'pop'){
+        if (k === 0 || k === 4) tone('triangle', mid(r), nextT, e * 1.8, 0.5);
+        if (k === 6) tone('triangle', mid(r + 7), nextT, e * 0.9, 0.35);
+        if (k % 2 === 1) hat(nextT, 0.12);
+      } else if (song.style === 'lazy'){
+        if (k === 0) tone('triangle', mid(r), nextT, e * 3.5, 0.45);
+        if (k === 4) tone('triangle', mid(r + 7), nextT, e * 3, 0.3);
+        if (k === 2 || k === 6) hat(nextT, 0.05);
+      } else {
+        tone('triangle', mid(k % 2 ? r + 12 : r), nextT, e * 0.8, 0.4);
+        hat(nextT, k % 2 ? 0.13 : 0.08);
+      }
       nextT += e; step++;
     }
   }
