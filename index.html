@@ -270,9 +270,11 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .rx i.cut{opacity:.6}
 .rx i.now{color:var(--panel);background:var(--c)}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.act{border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.act{border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:3px 10px;line-height:1.3;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
 .act b{font-weight:700}
-.act small{color:var(--muted);font-size:11px}
+.act small{color:var(--muted);font-size:11px;white-space:nowrap}
+.act.needs{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--panel))}
+.act.needs small{color:var(--warn);font-weight:700}
 .act.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 .act.primary small{color:inherit;opacity:.85}
 .act[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
@@ -394,8 +396,10 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       </div>
       <div class="rxcard hint" id="rxcard">點候診的病人看處方。</div>
       <div class="actions">
-        <button class="act" id="waterBtn" type="button"><b>喝水</b><small>1 分鐘・解渴，但會想上廁所</small></button>
-        <button class="act" id="toiletBtn" type="button"><b>上廁所</b><small>3 分鐘・膀胱清空</small></button>
+        <button class="act" id="waterBtn" type="button"><b>喝水</b><small>1 分・會想上廁所</small></button>
+        <button class="act" id="toiletBtn" type="button"><b>上廁所</b><small>3 分・膀胱清空</small></button>
+        <button class="act" id="washBtn" type="button"><b>洗毛巾</b><small id="washLab">髒毛巾 0 條</small></button>
+        <button class="act" id="foldBtn" type="button"><b>折毛巾</b><small id="foldLab">待折 0・乾淨 6</small></button>
       </div>
       <div class="ticker" id="ticker">準備開診。</div>
     </aside>
@@ -426,7 +430,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         <ol class="howto">
           <li><b>安排床位</b>：點候診病人，再點發亮的床位。直接點空床，會自動排最等不及的人。</li>
           <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。</li>
-          <li><b>冰敷還是熱敷，由你判斷</b>：有紅、腫、熱、痛就冰敷，慢性痠痛就熱敷。牽引前要先熱敷，做過熱敷的人不做短波。</li>
+          <li><b>冰敷還是熱敷，由你判斷</b>：有紅、腫、熱、痛就冰敷，慢性痠痛就熱敷。牽引前要先熱敷，做過熱敷的人不做短波。熱敷要用乾淨毛巾，用過的記得洗、洗好記得折。</li>
           <li><b>機器嗶嗶</b>就點一下，再決定病人下一個去哪，也可以先回候診區等。熱敷、冰敷超時會受傷。</li>
           <li><b>超音波</b>和<b>徒手治療</b>（各 5 分鐘）要你親自做，一次只能顧一床。去處理別的事時會暫停，記得點床位回來繼續。</li>
           <li><b>整點準時下班</b>：下班前 1 小時停止掛號，時間到還沒做完的病人每位扣 20 分。</li>
@@ -505,9 +509,9 @@ let speedIdx = 1;
 try { const v = +localStorage.getItem('ptSpeed'); if (SPEEDS[v]) speedIdx = v; } catch (e) {}
 
 const SHIFTS = {
-  am:  { name:'早診', start:510,  len:210, gap:[2.7,5.0], desc:'阿公阿嬤一開門就在排了' },
-  pm:  { name:'午診', start:840,  len:210, gap:[3.8,7.0], desc:'看起來很閒……千萬別說出口' },
-  eve: { name:'晚診', start:1080, len:180, gap:[2.2,4.2], desc:'下班族和學生一起湧進來' },
+  am:  { name:'早診', start:510,  len:210, gap:[3.15,5.75], desc:'阿公阿嬤一開門就在排了' },
+  pm:  { name:'午診', start:840,  len:210, gap:[4.8,8.4], desc:'看起來很閒……千萬別說出口' },
+  eve: { name:'晚診', start:1080, len:180, gap:[2.75,4.95], desc:'下班族和學生一起湧進來' },
 };
 
 // 治療項目：dur = 治療分鐘；setup = 你擺位要花的分鐘；back = 擺位對腰的負擔
@@ -715,7 +719,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v2'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v3'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -749,7 +753,7 @@ function newGame(key, code){
   lastShift = key; pendingEv = []; modal = null;
   const sh = SHIFTS[key];
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
-    st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{},
+    st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null,
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
     nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
@@ -838,7 +842,8 @@ function canDo(p, m){
   if (m === 'sw' && p.done.includes('heat')) return false;
   return true;
 }
-function usable(st){ return !st.broken && !(st.m === 'heat' && S.heatLow) && !(!S.power && ELECTRIC[st.m]); }
+const TOWEL_START = 6; // 開診時折好的乾淨毛巾
+function usable(st){ return !st.broken && !(st.m === 'heat' && (S.heatLow || S.towels <= 0)) && !(!S.power && ELECTRIC[st.m]); }
 function valid(st, p){ return !st.p && usable(st) && canDo(p, st.m); }
 
 function assign(st, p){
@@ -941,7 +946,8 @@ function judgePack(p, st){
   const why = m === 'heat'
     ? `${p.name}「${p.sym}」，有紅腫熱痛應該冰敷，熱敷會更腫更痛。`
     : `${p.name}「${p.sym}」，沒有紅腫熱痛，慢性痠痛熱敷比較適合。`;
-  // 取消放錯的床位
+  // 取消放錯的床位（用掉的毛巾丟進髒衣籃）
+  if (m === 'heat') S.dirty++;
   clearSt(st); S.lock = null;
   const free = S.st.find(s => s.m === right && !s.p && usable(s));
   let fix;
@@ -999,6 +1005,7 @@ function beginMod(st, p){
   const M = MODS[st.m], setup = M.setup * effMult();
   st.p = p; st.on = true; st.start = S.t + setup; st.dur = M.dur; st.doneAt = null; st.ot = false;
   S.back = clamp(S.back + M.back, 0, 100);
+  if (st.m === 'heat'){ S.towels = Math.max(0, S.towels - 1); if (S.towels === 1) msg('乾淨毛巾只剩 1 條了，記得洗毛巾、折毛巾！', 'bad'); else if (S.towels === 0) msg('乾淨毛巾用完了！沒有毛巾就不能熱敷。', 'bad'); }
   S.stamina = clamp(S.stamina - 0.6, 0, 100);
   S.throat = clamp(S.throat + 0.4, 0, 100);
   if (M.hands){
@@ -1019,6 +1026,7 @@ function completeStep(st){
   S.score += late > 5 ? 4 : 10;
   p.rem = p.rem.filter(m => m !== remKey(st.m));
   p.done.push(st.m);
+  if (st.m === 'heat') S.dirty++;
   afterMod(st, p);
 }
 function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; st.prog = 0; st.warn3 = false; st.pen = 0; if (S.coach === st) S.coach = null; }
@@ -1064,7 +1072,7 @@ function renderPicker(force){
   if (S.over || !S.queue.includes(p) || S.sel !== p.id){ closePicker(); return; }
   const opts = p.rem.flatMap(m => m === 'pack' ? ['heat', 'ice'] : [m]).map(m => {
     const n = freeCount(m), blocked = !canDo(p, m);
-    return { m, n, blocked, note: blocked ? (m === 'sw' ? '做過熱敷' : '要先熱敷') : n ? `空床 ${n}` : '客滿' };
+    return { m, n, blocked, note: blocked ? (m === 'sw' ? '做過熱敷' : '要先熱敷') : n ? `空床 ${n}` : (m === 'heat' && S.towels <= 0 ? '沒毛巾' : '客滿') };
   }).sort((a,b) => byOrder(a.m, b.m));
   const key = opts.map(o => o.m + o.note).join('|') + (S.lock ? 'L' : '');
   if (!force && key === PK.key) return;
@@ -1089,6 +1097,7 @@ $('pkOpts').addEventListener('click', e => {
 function step(g){
   S.t += g;
   if (S.lock && S.t >= S.lock.end){ const L = S.lock; S.lock = null; L.onDone && L.onDone(); }
+  if (S.washer && S.t >= S.washer.until){ S.toFold += S.washer.n; msg(`洗衣機嗶嗶！${S.washer.n} 條毛巾洗好了，記得去折。`, 'good'); S.washer = null; Music.ding(); }
   S.stamina = clamp(S.stamina - 0.1*g*(S.throat >= 100 ? 3 : 1), 0, 100);
   S.throat = clamp(S.throat + 0.5*g, 0, 100);
   S.bladder = clamp(S.bladder + 0.38*g, 0, 100);
@@ -1393,7 +1402,7 @@ function renderRoom(){
   });
   zoneEls.forEach(([z, zEl]) => {
     const all = S.st.filter(s => s.m === z.m), used = all.filter(s => s.p).length;
-    setText(zEl._count, `${used}/${all.length}`);
+    setText(zEl._count, z.m === 'heat' ? `${used}/${all.length}・毛巾 ${S.towels}` : `${used}/${all.length}`);
   });
 }
 
@@ -1493,6 +1502,12 @@ function render(){
   else setText($('lockLab'), '空檔中，可以安排病人');
   meter('mBlad','bBlad', S.bladder);
   $('toiletBtn').setAttribute('aria-disabled', String(!!L));
+  setText($('washLab'), S.washer ? `洗衣中・剩 ${Math.max(1, Math.ceil(S.washer.until - S.t))} 分` : `髒毛巾 ${S.dirty} 條`);
+  setText($('foldLab'), `待折 ${S.toFold}・乾淨 ${S.towels}`);
+  $('washBtn').setAttribute('aria-disabled', String(!!L || !!S.washer || !S.dirty));
+  $('foldBtn').setAttribute('aria-disabled', String(!!L || !S.toFold));
+  $('foldBtn').classList.toggle('needs', S.toFold > 0 && S.towels <= 1);
+  $('washBtn').classList.toggle('needs', !S.washer && S.dirty > 0 && S.towels + S.toFold <= 1);
   $('waterBtn').setAttribute('aria-disabled', String(!!L));
   const inc = [];
   if (!S.power) inc.push(['跳電', '']);
@@ -1549,6 +1564,9 @@ $('room').addEventListener('click', e => {
     return;
   }
   if (S.lock) return busy();
+  if (st.m === 'heat' && !S.heatLow && S.towels <= 0 && !st.broken){
+    return msg('沒有乾淨毛巾，不能熱敷！先去洗毛巾、折毛巾。', 'bad');
+  }
   if (st.m === 'heat' && S.heatLow){
     return setLock('幫熱敷箱補水加熱', 2, () => { S.heatLow = false; msg('熱敷箱補好水、溫度回來了。', 'good'); });
   }
@@ -1573,6 +1591,20 @@ $('seats').addEventListener('click', e => {
   S.sel = S.sel === id ? null : id;
   if (S.sel) S.peek = null;
 });
+$('washBtn').addEventListener('click', () => {
+  if (!S || S.over) return; if (S.lock) return busy();
+  if (S.washer) return msg(`洗衣機還在洗，還要 ${Math.max(1, Math.ceil(S.washer.until - S.t))} 分鐘。`);
+  if (!S.dirty) return msg('目前沒有髒毛巾要洗。');
+  const n = S.dirty;
+  setLock(`把 ${n} 條髒毛巾丟進洗衣機`, 0.6, () => { S.washer = { until:S.t + WASH_MIN, n }; S.dirty -= n; msg(`洗衣機開始洗 ${n} 條毛巾，大約 ${WASH_MIN} 分鐘。`, 'good'); });
+});
+$('foldBtn').addEventListener('click', () => {
+  if (!S || S.over) return; if (S.lock) return busy();
+  if (!S.toFold) return msg(S.washer ? '毛巾還在洗，洗好才能折。' : '目前沒有洗好的毛巾要折。');
+  const n = S.toFold;
+  setLock(`折 ${n} 條毛巾`, Math.max(0.6, n * 0.3), () => { S.towels += n; S.toFold -= n; msg(`折好 ${n} 條毛巾，乾淨毛巾有 ${S.towels} 條。`, 'good'); });
+});
+const WASH_MIN = 20; // 洗衣機一輪幾分鐘
 $('toiletBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
   setLock('去上廁所', 3, () => { S.bladder = 0; S.back = clamp(S.back - 3, 0, 100); msg('上完廁所，順便伸展一下腰。', 'good'); });
