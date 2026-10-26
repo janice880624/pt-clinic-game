@@ -486,9 +486,9 @@ let speedIdx = 1;
 try { const v = +localStorage.getItem('ptSpeed'); if (SPEEDS[v]) speedIdx = v; } catch (e) {}
 
 const SHIFTS = {
-  am:  { name:'早診', start:510,  len:210, gap:[3.6,6.6], desc:'阿公阿嬤一開門就在排了' },
-  pm:  { name:'午診', start:840,  len:210, gap:[6.2,10.6], desc:'看起來很閒……千萬別說出口' },
-  eve: { name:'晚診', start:1080, len:180, gap:[2.9,5.5], desc:'下班族和學生一起湧進來' },
+  am:  { name:'早診', start:510,  len:210, gap:[2.7,5.0], desc:'阿公阿嬤一開門就在排了' },
+  pm:  { name:'午診', start:840,  len:210, gap:[3.8,7.0], desc:'看起來很閒……千萬別說出口' },
+  eve: { name:'晚診', start:1080, len:180, gap:[2.2,4.2], desc:'下班族和學生一起湧進來' },
 };
 
 // 治療項目：dur = 治療分鐘；setup = 你擺位要花的分鐘；back = 擺位對腰的負擔
@@ -696,7 +696,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v1'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v2'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -735,7 +735,7 @@ function newGame(key, code){
     nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
-  spawn(); spawn(); if (key === 'am') spawn();
+  spawn(); spawn(); spawn(); if (key === 'am') spawn();
   msg(`${sh.name} #${code} 開診！候診區已經有人在等了。`);
   ['startOv','endOv','pauseOv','evOv','noteOv'].forEach(id => $(id).hidden = true);
 }
@@ -803,8 +803,14 @@ function spawn(urgent, front, opts){
 }
 
 function effMult(){ return 1 + (S.stamina < 30 ? 0.5 : 0) + S.back/200 + (S.throat > 80 ? 0.25 : 0) + (S.bladder > 85 ? 0.25 : 0); }
+// 離開超音波／徒手床：倒數暫停，要點床位回來才會繼續
+function leaveCoach(){
+  if (!S || !S.coach) return;
+  const c = S.coach; S.coach = null;
+  if (c.p) msg(`先暫停${MODS[c.m].name}，${c.p.name}躺著等你回來。`);
+}
 function setLock(label, dur, onDone){
-  if (S.coach){ const c = S.coach; S.coach = null; if (c.p) msg(`先暫停${MODS[c.m].name}，${c.p.name}躺著等你回來。`); }
+  leaveCoach();
   S.lock = { label, start:S.t, end:S.t+dur, onDone }; S.sel = null;
 }
 function canDo(p, m){
@@ -1051,6 +1057,7 @@ function renderPicker(force){
 $('pkOpts').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || b.disabled || !PK || !S || S.over) return;
   const p = PK.p, m = b.dataset.m;
+  leaveCoach();
   if (m === 'wait'){ S.sel = null; closePicker(); msg(`${p.name} 回候診區等空位。`); return; }
   if (S.lock) return busy();
   const free = S.st.find(s => s.m === m && !s.p && usable(s));
@@ -1478,6 +1485,7 @@ function busy(){ msg(`你正在${S.lock.label}，分身乏術！`, 'bad'); }
 $('room').addEventListener('click', e => {
   const el = e.target.closest('.unit'); if (!el || !S || S.over) return;
   const st = S.st[+el.dataset.i];
+  if (S.coach && S.coach !== st) leaveCoach();
   if (st.p && st.on && MODS[st.m].coach){
     if (S.coach === st) return msg(`你正在幫${st.p.name}${MODS[st.m].verb}，還剩 ${Math.max(1, Math.ceil(st.dur - st.prog))} 分鐘。`);
     if (S.lock) return busy();
@@ -1527,6 +1535,7 @@ $('room').addEventListener('click', e => {
 });
 $('seats').addEventListener('click', e => {
   const el = e.target.closest('.seat'); if (!el || !el.dataset.id || !S || S.over) return;
+  leaveCoach();
   const id = +el.dataset.id;
   S.sel = S.sel === id ? null : id;
   if (S.sel) S.peek = null;
