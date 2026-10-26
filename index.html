@@ -387,7 +387,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
           <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶，這段時間不能做別的事。</li>
           <li><b>冰敷還是熱敷，由你判斷</b>：有紅、腫、熱、痛就冰敷，慢性痠痛就熱敷。牽引前要先熱敷，做過熱敷的人不做短波。</li>
           <li><b>機器嗶嗶</b>就點一下，再決定病人下一個去哪，也可以先回候診區等。熱敷、冰敷超時會受傷。</li>
-          <li><b>超音波</b>（5 分鐘）和<b>徒手治療</b>（15 分鐘，一次只能一個人）要你親自做。去處理別的事時會暫停，記得點床位回來繼續。</li>
+          <li><b>超音波</b>和<b>徒手治療</b>（各 5 分鐘）要你親自做，一次只能顧一床。去處理別的事時會暫停，記得點床位回來繼續。</li>
+          <li><b>整點準時下班</b>：下班前 1 小時停止掛號，時間到還沒做完的病人每位扣 20 分。</li>
           <li><b>突發狀況</b>：跳電、機器故障、主任巡房、長輩團報到……隨時可能發生。</li>
           <li><b>記得喝水、上廁所</b>：太渴擺位會變慢，膀胱滿了會忍不住衝去廁所。</li>
         </ol>
@@ -474,7 +475,7 @@ const MODS = {
   estim: { name:'電療',     short:'電療',   dur:15, setup:0.7, back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
   tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:1,   back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
   tracC: { name:'頸椎牽引', short:'拉脖子', dur:15, setup:0.8, back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
-  ex:    { name:'徒手治療', short:'徒手',   dur:15, setup:0,   back:1.5, color:'var(--gym)',   order:6, verb:'做徒手治療', coach:true },
+  ex:    { name:'徒手治療', short:'徒手',   dur:5,  setup:0,   back:1.5, color:'var(--gym)',   order:6, verb:'做徒手治療', coach:true },
   laser: { name:'雷射',     short:'雷射',   dur:5,  setup:0.4, back:0.2, color:'var(--laser)', order:5, verb:'對準雷射' },
 };
 
@@ -485,7 +486,7 @@ const ZONES = [
   { m:'estim', name:'電療區',   n:8, cols:4, row:1, furn:'bed',   label:'電療床' },
   { m:'us',    name:'超音波',   n:1, cols:1, row:1, furn:'bed',   label:'超音波', stack:'sx' },
   { m:'sw',    name:'短波區',   n:2, cols:2, row:1, furn:'bed',   label:'短波', stack:'sx' },
-  { m:'ex',    name:'徒手區',   n:1, cols:1, row:1, furn:'bed',   label:'徒手床' },
+  { m:'ex',    name:'徒手區',   n:2, cols:1, row:1, furn:'bed',   label:'徒手床' },
   { m:'tracL', name:'拉腰區',   n:3, cols:3, row:2, furn:'long',  label:'腰椎牽引床' },
   { m:'tracC', name:'拉脖子區', n:3, cols:3, row:2, furn:'chair', label:'頸椎牽引椅' },
   { m:'laser', name:'雷射區',   n:4, cols:4, row:2, furn:'chair', label:'雷射' },
@@ -617,9 +618,9 @@ const INCIDENTS = [
       return `${st.label}突然沒反應${st.p ? `，${st.p.name}還躺在上面` : ''}。點它去修理`; } },
   { id:'water', title:'熱敷箱水位太低', ok:() => !S.heatLow,
     run(){ S.heatLow = true; return '熱敷包不夠熱，不能再排新的熱敷。點空的熱敷床去補水加熱'; } },
-  { id:'bus', title:'社區據點的長輩到了', ok:() => S.t < S.end - 40 && S.arrived <= MAX_PATIENTS - 4,
+  { id:'bus', title:'社區據點的長輩到了', ok:() => S.t < S.end - LAST_CALL - 5 && S.arrived <= MAX_PATIENTS - 4,
     run(){ for (let i = 0; i < 4; i++) spawn(false, false, { senior:true }); return '一台小巴載來 4 位阿公阿嬤，候診區一下子滿了'; } },
-  { id:'desk', title:'櫃台系統當機', ok:() => S.t < S.end - 40 && !S.deskDownUntil,
+  { id:'desk', title:'櫃台系統當機', ok:() => S.t < S.end - LAST_CALL - 10 && !S.deskDownUntil,
     run(){ S.deskDownUntil = S.t + 8; S.deskBacklog = 0; return '健保卡讀不到，病人都卡在櫃台。等等系統好了會一次湧進來'; } },
   { id:'inspect', title:'主任來巡房', ok:() => !S.inspectUntil,
     run(){ S.inspectUntil = S.t + 6; S.inspectHits = 0; S.st.forEach(s => s.insp = false); return '接下來 6 分鐘，別讓任何機器嗶太久'; } },
@@ -718,8 +719,10 @@ function genRx(rx, acute){
 }
 const remKey = m => (m === 'heat' || m === 'ice') ? 'pack' : m;
 const MAX_PATIENTS = 45; // 每一診最多來診人數
+const LAST_CALL = 60; // 下班前幾分鐘停止掛號
 function spawn(urgent, front, opts){
   if (S.arrived >= MAX_PATIENTS) return;
+  if (S.arrived > 0 && S.t >= S.end - LAST_CALL) return;
   const sur = SURNAMES[Math.floor(Math.random()*SURNAMES.length)];
   let p, metal = 0;
   if (urgent){
@@ -1009,8 +1012,8 @@ function step(g){
   S.t += g;
   if (S.lock && S.t >= S.lock.end){ const L = S.lock; S.lock = null; L.onDone && L.onDone(); }
   S.stamina = clamp(S.stamina - 0.1*g*(S.throat >= 100 ? 3 : 1), 0, 100);
-  S.throat = clamp(S.throat + 0.3*g, 0, 100);
-  S.bladder = clamp(S.bladder + 0.22*g, 0, 100);
+  S.throat = clamp(S.throat + 0.5*g, 0, 100);
+  S.bladder = clamp(S.bladder + 0.38*g, 0, 100);
   if (S.throat > 80 && !S.warned.thirst){ S.warned.thirst = true; msg('口好渴……擺位開始變慢了，找空檔喝口水。', 'bad'); }
   if (S.throat < 60) S.warned.thirst = false;
   if (S.bladder > 85 && !S.warned.blad){ S.warned.blad = true; msg('好想上廁所……再忍下去會出事。', 'bad'); }
@@ -1032,7 +1035,7 @@ function step(g){
     if (!S.inspectHits){ S.score += 30; msg('主任點點頭：「很有效率喔！」 +30', 'good'); }
     else { S.score -= 10*S.inspectHits; msg(`主任巡完了，記下 ${S.inspectHits} 台機器嗶太久。`, 'bad'); }
   }
-  if (S.t >= S.nextInc && !modal && S.t < S.end + 20){ fireIncident(); S.nextInc = S.t + rand(26, 42); }
+  if (S.t >= S.nextInc && !modal && S.t < S.end - 5){ fireIncident(); S.nextInc = S.t + rand(26, 42); }
   if (S.t >= S.nextFault && !modal){ fireFault(); S.nextFault = S.t + rand(14, 24); }
   if (S.t < S.end && S.t >= S.nextArr && S.deskDownUntil){
     S.deskBacklog++;
@@ -1086,9 +1089,10 @@ function step(g){
     if (ev) openEvent(ev, null); else S.nextEvt = S.t + 10;
   }
   if (S.back >= 100) return finish('back');
+  if (S.t >= S.end - 15 && !S.warned.close){ S.warned.close = true; msg(`再 15 分鐘就 ${fmt(S.end)} 下班了，沒做完的病人會扣分！`, 'bad'); }
+  if (S.t >= S.end) return finish('time');
   const idle = !S.queue.length && S.st.every(s => !s.p) && !S.lock;
-  if (S.t >= S.end && idle) return finish('done');
-  if (S.t >= S.end + 90) return finish('late');
+  if (S.t >= S.end - LAST_CALL && idle) return finish('early');
 }
 
 let alertTimer = null;
@@ -1186,11 +1190,11 @@ function finish(reason){
   S.over = true; Music.stop();
   const ot = Math.max(0, Math.round(S.t - S.end));
   const left = S.queue.length + S.st.filter(s => s.p).length;
-  const final = S.score - left * 15;
+  const final = S.score - left * 20;
   const ratio = final / Math.max(1, S.arrived * 65);
   let G = GRADES.find(x => ratio >= x.min);
   if (reason === 'back') G = GRADES[GRADES.length - 1];
-  const kicker = reason === 'back' ? '閃到腰，提早下班' : reason === 'late' ? '加班太久，被主管趕回家' : '下班了';
+  const kicker = reason === 'back' ? '閃到腰，提早下班' : reason === 'early' ? '病人都清空了，提早收工' : `${fmt(S.end)} 準時下班`;
   $('endKicker').textContent = `${S.sh.name}・${kicker}`;
   $('endCard').style.setProperty('--gc', G.c);
   $('endGrade').textContent = G.g;
@@ -1198,11 +1202,11 @@ function finish(reason){
   $('endScale').innerHTML = GRADES.map(x => `<span class="${x.g === G.g ? 'me' : ''}">${x.g}</span>`).join('');
   const cells = [
     ['完成治療', `${S.served}/${S.arrived}`], ['客訴', S.complaints + ' 件'], ['異常事件', S.incidents + ' 件'],
-    ['加班', ot + ' 分'], ['憋到衝廁所', S.toiletRush + ' 次'], ['分數', final],
+    ['沒做完', left + ' 人'], ['憋到衝廁所', S.toiletRush + ' 次'], ['分數', final],
   ];
   $('endSum').innerHTML = cells.map(([a,b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
   const notes = [];
-  if (left) notes.push(`${left} 位病人沒做完。`);
+  if (left) notes.push(`${left} 位病人沒做完，每位扣 20 分。`);
   if (S.incidents) notes.push(`有 ${S.incidents} 件異常事件要寫報告。`);
   if (S.judgeOk || S.judgeBad) notes.push(`冷熱敷判斷：對 ${S.judgeOk || 0} 次、錯 ${S.judgeBad || 0} 次。`);
   if (!notes.length) notes.push('病人全部做完，準時打卡。');
@@ -1375,8 +1379,8 @@ function meter(id, bar, v, invert){
 function render(){
   setText($('clk'), fmt(S.t));
   const lab = $('shiftLab');
-  if (S.t >= S.end){ setText(lab, `掛號截止・加班 ${Math.floor(S.t - S.end)} 分`); lab.className = 'ot'; }
-  else { setText(lab, `${S.sh.name}・${fmt(S.end)} 截止` + (S.t < S.rushUntil ? '・病人潮！' : '')); lab.className = S.t < S.rushUntil ? 'ot' : ''; }
+  if (S.t >= S.end - LAST_CALL){ setText(lab, `停止掛號・${fmt(S.end)} 下班`); lab.className = 'ot'; }
+  else { setText(lab, `${S.sh.name}・${fmt(S.end)} 下班` + (S.t < S.rushUntil ? '・病人潮！' : '')); lab.className = S.t < S.rushUntil ? 'ot' : ''; }
   meter('mSta','bSta', S.stamina, true);
   meter('mBack','bBack', S.back);
   meter('mThr','bThr', S.throat);
