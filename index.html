@@ -273,15 +273,29 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .title .pine{color:var(--heat)}
 .kicker{font-size:11px;letter-spacing:.12em;color:var(--brand);font-weight:700}
 .lede{margin:0;color:var(--muted)}
+.codebox{display:flex;flex-direction:column;gap:4px;background:var(--panel2);border:1.5px dashed var(--line);border-radius:12px;padding:8px 12px}
+.cb-row{display:flex;align-items:center;gap:8px}
+.cb-row label{font-weight:700;font-size:13px;white-space:nowrap}
+#codeIn{flex:1;min-width:0;font:inherit;font-family:var(--f-mono);font-size:18px;letter-spacing:.2em;padding:4px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);-webkit-user-select:text;user-select:text}
+#codeIn:focus{outline:2px solid var(--brand);outline-offset:1px}
+.cb-daily{border:1.5px solid var(--brand);background:var(--panel);color:var(--brand);border-radius:8px;padding:4px 10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.codebox small{font-size:11px;color:var(--muted)}
+.codebox small.invite{color:var(--brand);font-weight:700}
+.shift.hl{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 30%,transparent)}
+.share{display:flex;flex-direction:column;gap:6px;background:var(--panel2);border-radius:10px;padding:8px 10px}
+.share textarea{font:inherit;font-size:12px;line-height:1.5;resize:none;height:62px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel);color:var(--ink);-webkit-user-select:text;user-select:text}
+.share .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.share small{font-size:11px;color:var(--muted)}
+.btn.sm{padding:6px 12px;font-size:12px}
 .shifts{display:grid;gap:6px}
 .shift{display:grid;grid-template-columns:auto 1fr auto;gap:0 12px;align-items:center;text-align:left;cursor:pointer;
-  border:1.5px solid var(--line);background:var(--panel2);border-radius:12px;padding:8px 12px}
+  border:1.5px solid var(--line);background:var(--panel2);border-radius:12px;padding:5px 12px}
 .shift:hover{border-color:var(--brand)}
-.shift .n{font-family:var(--f-disp);font-size:22px;grid-row:span 2}
+.shift .n{font-family:var(--f-disp);font-size:20px;grid-row:span 2}
 .shift .tm2{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .shift .d{font-size:12px;color:var(--muted);grid-column:2}
 .shift .go{grid-row:span 2;grid-column:3;font-weight:700;color:var(--brand)}
-.howto{margin:0;padding-left:1.2em;display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.howto{margin:0;padding-left:1.2em;display:grid;gap:1px;font-size:11.5px;line-height:1.4;color:var(--muted)}
 .howto b{color:var(--ink)}
 .legend{display:flex;flex-wrap:wrap;gap:5px}
 .chip{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
@@ -381,6 +395,14 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         <p class="foot">非商業作品，僅供教育推廣與交流分享，請勿用於任何商業用途。<br>遊戲中的情境、治療參數與處置皆為練習用的簡化設定，實際臨床請依醫囑及所屬院所規範執行。<br>© Janice 製作・採用 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" target="_blank" rel="noopener">CC BY-NC 4.0</a> 授權・靈感來自護理師值班遊戲〈<a href="https://busy-nurse.vercel.app/" target="_blank" rel="noopener">上班不要吃鳳梨</a>〉</p>
       </div>
       <div class="col">
+        <div class="codebox">
+          <div class="cb-row">
+            <label for="codeIn">挑戰碼</label>
+            <input id="codeIn" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="留空＝隨機">
+            <button class="cb-daily" id="dailyBtn" type="button">今日挑戰</button>
+          </div>
+          <small id="codeHint">輸入朋友給的 4 位數代碼、選同一個班別，就會遇到一樣的病人。</small>
+        </div>
         <div class="shifts" id="shifts"></div>
         <ol class="howto">
           <li><b>安排床位</b>：點候診病人，再點發亮的床位。直接點空床，會自動排最等不及的人。</li>
@@ -434,7 +456,11 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       <div class="col">
         <div class="sum" id="endSum"></div>
         <p class="lede" id="endNote"></p>
-        <div class="btns"><button class="btn" id="againBtn" type="button">同一班再來一次</button><button class="btn ghost" id="menuBtn" type="button">換班別</button></div>
+        <div class="share">
+          <div class="row"><small id="shareLab">分享這一診的挑戰碼</small><button class="btn sm" id="copyBtn" type="button">複製挑戰文字</button></div>
+          <textarea id="shareTxt" readonly aria-label="挑戰文字"></textarea>
+        </div>
+        <div class="btns"><button class="btn" id="againBtn" type="button">同一組再玩一次</button><button class="btn ghost" id="menuBtn" type="button">換班別</button></div>
       </div>
     </div>
   </div>
@@ -614,7 +640,7 @@ const INCIDENTS = [
   { id:'power', title:'治療室跳電了', ok:() => S.power,
     run(){ S.power = false; S.powerAt = S.t; return '電療、短波、雷射、牽引全部停擺。點任一台停電的機器去重開總開關'; } },
   { id:'broken', title:'機器故障', ok:() => S.st.filter(s => s.broken).length < 2,
-    run(){ const c = S.st.filter(s => ELECTRIC[s.m] && !MODS[s.m].hands && !MODS[s.m].coach && !s.broken); const st = c[Math.floor(Math.random()*c.length)]; st.broken = true;
+    run(){ const c = S.st.filter(s => ELECTRIC[s.m] && !MODS[s.m].hands && !MODS[s.m].coach && !s.broken); const st = c[Math.floor(RNG.play()*c.length)]; st.broken = true;
       return `${st.label}突然沒反應${st.p ? `，${st.p.name}還躺在上面` : ''}。點它去修理`; } },
   { id:'water', title:'熱敷箱水位太低', ok:() => !S.heatLow,
     run(){ S.heatLow = true; return '熱敷包不夠熱，不能再排新的熱敷。點空的熱敷床去補水加熱'; } },
@@ -669,7 +695,27 @@ function avatar(look){
 
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
-const rand = (a,b) => a + Math.random()*(b-a);
+// ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
+const GAME_VER = 'v1'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+function seedHash(str){
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return (h ^= h >>> 16) >>> 0;
+}
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// 每種用途一條獨立的亂數流，玩家操作不同也不會打亂病人名單
+const RNG = { pat:Math.random, sen:Math.random, urg:Math.random, arr:Math.random, evt:Math.random, inc:Math.random, play:Math.random };
+function seedAll(key, code){
+  const base = `${GAME_VER}|${key}|${code}|`;
+  for (const k of Object.keys(RNG)) RNG[k] = mulberry32(seedHash(base + k));
+}
+const randomCode = () => String(1000 + Math.floor(Math.random()*9000));
+function dailyCode(){
+  const d = new Date(), ds = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  return String(1000 + seedHash('daily|' + ds) % 9000);
+}
+const rand = (a,b,r = RNG.play) => a + r()*(b-a);
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const fmt = m => { m = Math.floor(m); return String(Math.floor(m/60)%24).padStart(2,'0') + ':' + String(m%60).padStart(2,'0'); };
 const byOrder = (a,b) => MODS[a].order - MODS[b].order;
@@ -677,43 +723,45 @@ const byOrder = (a,b) => MODS[a].order - MODS[b].order;
 let PID = 0; // 病人編號全域遞增，避免換局後畫面沿用舊病人
 let S = null, unitEls = [], zoneEls = [], modal = null, pendingEv = [], lastShift = 'am';
 
-function newGame(key){
+function newGame(key, code){
+  code = /^\d{4}$/.test(code || '') ? code : randomCode();
+  seedAll(key, code);
   $('walkers').innerHTML = ''; $('callNo').textContent = '---'; $('callTo').textContent = '治療室';
   lastShift = key; pendingEv = []; modal = null;
   const sh = SHIFTS[key];
-  S = { key, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
+  S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{},
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
-    nextArr: sh.start + rand(2,4), nextEvt: sh.start + rand(16,28), nextInc: sh.start + rand(30,45), nextFault: sh.start + rand(14,22), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
+    nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
   spawn(); spawn(); if (key === 'am') spawn();
-  msg(`${sh.name}開診！候診區已經有人在等了。`);
+  msg(`${sh.name} #${code} 開診！候診區已經有人在等了。`);
   ['startOv','endOv','pauseOv','evOv','noteOv'].forEach(id => $(id).hidden = true);
 }
 
-function pick(arr, wf){ const tot = arr.reduce((s,x) => s + wf(x), 0); let r = Math.random()*tot; for (const x of arr){ r -= wf(x); if (r < 0) return x; } return arr[0]; }
+function pick(arr, wf, rng = RNG.pat){ const tot = arr.reduce((s,x) => s + wf(x), 0); let r = rng()*tot; for (const x of arr){ r -= wf(x); if (r < 0) return x; } return arr[0]; }
 // 急性受傷：熱敷改冰敷，不做牽引、短波
 // 處方裡的熱敷改成「冷/熱敷」(pack)，由玩家依症狀判斷；冷熱敷和短波不同時開
-function genRx(rx, acute){
+function genRx(rx, acute, rng = RNG.pat){
   rx = { ...rx };
   if ('heat' in rx){ rx.pack = rx.heat; delete rx.heat; }
   // 急性期（紅腫熱痛）：冷熱敷、一定安排雷射，不做牽引、短波、超音波
   if (acute){ delete rx.tracL; delete rx.tracC; delete rx.sw; delete rx.us; delete rx.ex; rx.pack = 0.95; rx.laser = 1; }
   const ent = Object.entries(rx).sort((a,b) => b[1]-a[1]);
-  let got = ent.filter(([,pr]) => Math.random() < pr).map(([m]) => m);
+  let got = ent.filter(([,pr]) => rng() < pr).map(([m]) => m);
   for (const [m] of ent){ if (got.length >= 2) break; if (!got.includes(m)) got.push(m); }
   const hasTrac = got.some(m => MODS[m].needHeat);
   if (hasTrac && !got.includes('pack')) got.push('pack');
   if (got.includes('pack') && got.includes('sw')){
-    if (hasTrac || Math.random() < 0.5) got = got.filter(m => m !== 'sw'); else got = got.filter(m => m !== 'pack');
+    if (hasTrac || rng() < 0.5) got = got.filter(m => m !== 'sw'); else got = got.filter(m => m !== 'pack');
   }
   // 超音波、雷射擇一
-  if (got.includes('us') && got.includes('laser')){ const drop = Math.random() < 0.5 ? 'us' : 'laser'; got = got.filter(m => m !== drop); }
+  if (got.includes('us') && got.includes('laser')){ const drop = rng() < 0.5 ? 'us' : 'laser'; got = got.filter(m => m !== drop); }
   for (const m of ['estim', 'laser']){ if (got.length >= 2) break; if (!got.includes(m) && !(m === 'laser' && got.includes('us'))) got.push(m); }
   while (got.length > 4){
     const removable = got.filter(m => !(hasTrac && (m === 'pack' || MODS[m].needHeat)) && !(acute && m === 'laser'));
-    got.splice(got.indexOf(removable[Math.floor(Math.random()*removable.length)]), 1);
+    got.splice(got.indexOf(removable[Math.floor(rng()*removable.length)]), 1);
   }
   return got.sort(byOrder);
 }
@@ -723,7 +771,8 @@ const LAST_CALL = 60; // 下班前幾分鐘停止掛號
 function spawn(urgent, front, opts){
   if (S.arrived >= MAX_PATIENTS) return;
   if (S.arrived > 0 && S.t >= S.end - LAST_CALL) return;
-  const sur = SURNAMES[Math.floor(Math.random()*SURNAMES.length)];
+  const r = urgent ? RNG.urg : (opts && opts.senior) ? RNG.sen : RNG.pat;
+  const sur = SURNAMES[Math.floor(r()*SURNAMES.length)];
   let p, metal = 0;
   if (urgent){
     p = { name:sur + URGENT.title, dx:URGENT.dx, part:URGENT.part, look:URGENT.look, rx:[...URGENT.rx], patMax:URGENT.pat, inflamed:true };
@@ -732,20 +781,23 @@ function spawn(urgent, front, opts){
     if (opts && opts.senior){
       const pool = [];
       PARTS.forEach(X => X.people.forEach(pp => { if (pp[2] === 'granny' || pp[2] === 'grandpa') pool.push([X, pp]); }));
-      [P, person] = pool[Math.floor(Math.random()*pool.length)];
+      [P, person] = pool[Math.floor(r()*pool.length)];
     } else {
-      P = pick(PARTS, x => x.w[S.key]);
-      person = P.people[Math.floor(Math.random()*P.people.length)];
+      P = pick(PARTS, x => x.w[S.key], r);
+      person = P.people[Math.floor(r()*P.people.length)];
     }
     const [title, pat, look] = person;
-    const acute = Math.random() < (P.acute || 0);
-    p = { name:sur + title, dx:P.dx, part:P.part, look, rx:genRx(P.rx, acute), patMax:pat, inflamed:acute }; metal = P.metal;
+    const acute = r() < (P.acute || 0);
+    p = { name:sur + title, dx:P.dx, part:P.part, look, rx:genRx(P.rx, acute, r), patMax:pat, inflamed:acute }; metal = P.metal;
   }
   Object.assign(p, { id:++PID, rem:[...p.rx], done:[], cut:[], patience:100, urgent:!!urgent, svg:avatar(p.look),
-    pm: !urgent && (p.rx.includes('estim') || p.rx.includes('sw')) && Math.random() < 0.06,
-    metal: !urgent && p.rx.includes('sw') && Math.random() < metal, asked:{},
-    sleepy: !urgent && !p.inflamed && p.rx.includes('pack') && Math.random() < 0.15, woke:false });
-  p.sym = (p.inflamed ? SYM_HOT : SYM_COLD)[Math.floor(Math.random()*4)];
+    asked:{}, woke:false });
+  // 固定抽 4 次，不論條件，讓每位病人消耗的亂數數量一致
+  const r1 = r(), r2 = r(), r3 = r(), r4 = r();
+  p.pm = !urgent && (p.rx.includes('estim') || p.rx.includes('sw')) && r1 < 0.06;
+  p.metal = !urgent && p.rx.includes('sw') && r2 < metal;
+  p.sleepy = !urgent && !p.inflamed && p.rx.includes('pack') && r3 < 0.15;
+  p.sym = (p.inflamed ? SYM_HOT : SYM_COLD)[Math.floor(r4*4)];
   S.arrived++; p.no = ++S.ticket; p.arriving = true; p.atBed = null; p.walkInUntil = 0;
   front ? S.queue.unshift(p) : S.queue.push(p);
 }
@@ -1035,15 +1087,15 @@ function step(g){
     if (!S.inspectHits){ S.score += 30; msg('主任點點頭：「很有效率喔！」 +30', 'good'); }
     else { S.score -= 10*S.inspectHits; msg(`主任巡完了，記下 ${S.inspectHits} 台機器嗶太久。`, 'bad'); }
   }
-  if (S.t >= S.nextInc && !modal && S.t < S.end - 5){ fireIncident(); S.nextInc = S.t + rand(26, 42); }
-  if (S.t >= S.nextFault && !modal){ fireFault(); S.nextFault = S.t + rand(14, 24); }
+  if (S.t >= S.nextInc && !modal && S.t < S.end - 5){ fireIncident(); S.nextInc = S.t + rand(26, 42, RNG.inc); }
+  if (S.t >= S.nextFault && !modal){ fireFault(); S.nextFault = S.t + rand(14, 24, RNG.play); }
   if (S.t < S.end && S.t >= S.nextArr && S.deskDownUntil){
     S.deskBacklog++;
-    S.nextArr = S.t + rand(...S.sh.gap);
+    S.nextArr = S.t + rand(...S.sh.gap, RNG.arr);
   }
   if (S.t < S.end && S.t >= S.nextArr){
     spawn();
-    S.nextArr = S.t + rand(...S.sh.gap) * (S.t < S.rushUntil ? 0.4 : 1);
+    S.nextArr = S.t + rand(...S.sh.gap, RNG.arr) * (S.t < S.rushUntil ? 0.4 : 1);
   }
   for (const p of [...S.queue]){
     p.patience -= g * (100 / p.patMax);
@@ -1100,7 +1152,7 @@ let alertTimer = null;
 function fireFault(){
   const c = S.st.filter(s => s.p && s.on && s.doneAt == null && S.t >= s.start && (s.m === 'estim' || s.m === 'laser') && !s.fault && !s.broken && (S.power || !ELECTRIC[s.m]));
   if (!c.length) return;
-  const st = c[Math.floor(Math.random()*c.length)];
+  const st = c[Math.floor(RNG.play()*c.length)];
   st.fault = st.m === 'estim' ? 'pad' : 'probe'; st.faultAt = S.t; st.faultWarn = false;
   const title = st.fault === 'pad' ? '電療貼片掉了' : '雷射探頭滑掉了';
   const d = st.fault === 'pad'
@@ -1117,7 +1169,7 @@ function fireIncident(){
   if (!pool.length) return;
   const min = Math.min(...pool.map(x => S.incUsed[x.id] || 0));
   const cand = pool.filter(x => (S.incUsed[x.id] || 0) === min);
-  const x = cand[Math.floor(Math.random()*cand.length)];
+  const x = cand[Math.floor(RNG.inc()*cand.length)];
   S.incUsed[x.id] = (S.incUsed[x.id] || 0) + 1;
   const d = x.run();
   $('alertK').textContent = '突發狀況'; $('alertT').textContent = x.title; $('alertD').textContent = d;
@@ -1130,7 +1182,7 @@ function pickEvent(){
   const ok = EVENTS.filter(e => (!e.when || e.when()) && !(e.once && S.used.has(e.id)));
   const fresh = ok.filter(e => !S.used.has(e.id));
   const pool = fresh.length ? fresh : ok;
-  return pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+  return pool.length ? pool[Math.floor(RNG.evt()*pool.length)] : null;
 }
 
 /* ---------- 事件視窗 ---------- */
@@ -1169,7 +1221,7 @@ function choose(i){
 function closeEvent(){
   const wasRandom = !modal.ctx;
   modal = null; $('evOv').hidden = true;
-  if (wasRandom) S.nextEvt = S.t + rand(22, 38);
+  if (wasRandom) S.nextEvt = S.t + rand(22, 38, RNG.evt);
   if (pendingEv.length){ const [e, c] = pendingEv.shift(); e === 'notice' ? showNotice(c.title, c.desc) : openEvent(e, c); }
 }
 function applyFx(fx){
@@ -1195,7 +1247,11 @@ function finish(reason){
   let G = GRADES.find(x => ratio >= x.min);
   if (reason === 'back') G = GRADES[GRADES.length - 1];
   const kicker = reason === 'back' ? '閃到腰，提早下班' : reason === 'early' ? '病人都清空了，提早收工' : `${fmt(S.end)} 準時下班`;
-  $('endKicker').textContent = `${S.sh.name}・${kicker}`;
+  $('endKicker').textContent = `${S.sh.name} #${S.code}・${kicker}`;
+  const url = `${SHARE_URL}#${S.key}${S.code}`;
+  $('shareTxt').value = `我在〈不要說今天很閒〉${S.sh.name} #${S.code} 拿到 ${G.g}（${final} 分），你敢挑戰嗎？\n開始畫面輸入 ${S.code}、選${S.sh.name}，就會遇到一樣的病人（${GAME_VER}）\n${url}`;
+  $('shareLab').textContent = `分享這一診的挑戰碼 #${S.code}`;
+  $('copyBtn').textContent = '複製挑戰文字';
   $('endCard').style.setProperty('--gc', G.c);
   $('endGrade').textContent = G.g;
   $('endRank').textContent = reason === 'back' ? '先去給同事治療一下腰吧' : G.say;
@@ -1379,8 +1435,8 @@ function meter(id, bar, v, invert){
 function render(){
   setText($('clk'), fmt(S.t));
   const lab = $('shiftLab');
-  if (S.t >= S.end - LAST_CALL){ setText(lab, `停止掛號・${fmt(S.end)} 下班`); lab.className = 'ot'; }
-  else { setText(lab, `${S.sh.name}・${fmt(S.end)} 下班` + (S.t < S.rushUntil ? '・病人潮！' : '')); lab.className = S.t < S.rushUntil ? 'ot' : ''; }
+  if (S.t >= S.end - LAST_CALL){ setText(lab, `#${S.code}・停止掛號・${fmt(S.end)} 下班`); lab.className = 'ot'; }
+  else { setText(lab, `${S.sh.name} #${S.code}・${fmt(S.end)} 下班` + (S.t < S.rushUntil ? '・病人潮！' : '')); lab.className = S.t < S.rushUntil ? 'ot' : ''; }
   meter('mSta','bSta', S.stamina, true);
   meter('mBack','bBack', S.back);
   meter('mThr','bThr', S.throat);
@@ -1495,14 +1551,33 @@ $('resumeBtn').addEventListener('click', () => { S.paused = false; $('pauseOv').
 const toMenu = () => { Music.stop(); closePicker(); $('pauseOv').hidden = true; $('endOv').hidden = true; if (S) S.over = true; $('startOv').hidden = false; };
 $('quitBtn').addEventListener('click', toMenu);
 $('menuBtn').addEventListener('click', toMenu);
-$('againBtn').addEventListener('click', () => { newGame(lastShift); Music.start(); });
+$('againBtn').addEventListener('click', () => { newGame(lastShift, S && S.code); Music.start(); });
+const SHARE_URL = 'https://janice880624.github.io/pt-clinic-game/';
+$('copyBtn').addEventListener('click', () => {
+  const ta = $('shareTxt'), done = () => { $('copyBtn').textContent = '已複製！'; };
+  const fallback = () => { ta.focus(); ta.select(); $('copyBtn').textContent = '已選取，請按複製'; };
+  try { navigator.clipboard.writeText(ta.value).then(done, fallback); } catch (e) { fallback(); }
+});
+$('codeIn').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
+$('dailyBtn').addEventListener('click', () => {
+  $('codeIn').value = dailyCode();
+  const h = $('codeHint'); h.className = 'invite'; h.textContent = `今日挑戰碼 #${$('codeIn').value}：今天每個人玩到的病人都一樣，選一個班別開始吧！`;
+});
+// 從分享連結帶入挑戰碼，例如 #am4821
+(function(){
+  const m = /^#(am|pm|eve)(\d{4})$/.exec(location.hash || '');
+  if (!m) return;
+  $('codeIn').value = m[2];
+  const h = $('codeHint'); h.className = 'invite'; h.textContent = `朋友邀請你挑戰 ${SHIFTS[m[1]].name} #${m[2]}，選${SHIFTS[m[1]].name}就能開始！`;
+  setTimeout(() => { const b = document.querySelector(`.shift[data-k="${m[1]}"]`); if (b) b.classList.add('hl'); }, 0);
+})();
 
 function renderShifts(){
   $('shifts').innerHTML = Object.entries(SHIFTS).map(([k, s]) =>
     `<button class="shift" type="button" data-k="${k}"><span class="n">${s.name}</span><span class="tm2">${fmt(s.start)}–${fmt(s.start+s.len)}・約 ${Math.round(s.len*SPEEDS[speedIdx].sec/60)} 分鐘</span><span class="go">開診 ›</span><span class="d">${s.desc}</span></button>`).join('');
 }
 renderShifts();
-$('shifts').addEventListener('click', e => { const b = e.target.closest('.shift'); if (b){ newGame(b.dataset.k); Music.start(); } });
+$('shifts').addEventListener('click', e => { const b = e.target.closest('.shift'); if (b){ newGame(b.dataset.k, $('codeIn').value.trim()); Music.start(); } });
 $('legend').innerHTML = ZONES.map(z => `<span class="chip" style="--c:${MODS[z.m].color}">${MODS[z.m].short} ×${z.n}</span>`).join('');
 
 /* ---------- 背景音樂（Web Audio 即時合成，原創旋律） ---------- */
