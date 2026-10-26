@@ -144,6 +144,25 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .unit.done .lamp{background:var(--bad);animation:blink .5s steps(2,jump-none) infinite}
 .unit.done .tm{color:var(--mc);font-weight:600}
 .unit.late .tm{color:var(--bad)}
+/* 熱敷／冰敷超時：3 分鐘開始警告，5 分鐘「熱死／凍死」 */
+.unit.hotwarn .furn{border:2.5px solid var(--bad);animation:urgent .35s ease-in-out infinite alternate}
+.unit.coldwarn .furn{border:2.5px solid var(--ice);animation:urgent .35s ease-in-out infinite alternate}
+.unit.hotwarn .tm{color:var(--bad);font-weight:700}
+.unit.coldwarn .tm{color:var(--ice);font-weight:700}
+.unit.cooked .furn,.unit.frozen .furn{animation:shake .25s linear infinite}
+.unit.cooked .furn{border:3px solid var(--bad);background:color-mix(in srgb,var(--bad) 70%,var(--bed))}
+.unit.frozen .furn{border:3px solid var(--ice);background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--ice) 75%,var(--bed)) 0 7px,color-mix(in srgb,var(--ice) 45%,var(--bed)) 7px 14px)}
+.unit.cooked .tm,.unit.cooked .nm{color:var(--bad);font-weight:700}
+.unit.frozen .tm,.unit.frozen .nm{color:var(--ice);font-weight:700}
+.unit .boom{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);z-index:3;white-space:nowrap;font-family:var(--f-disp);font-size:13px;line-height:1;
+  padding:3px 5px;border-radius:6px;color:#fff;pointer-events:none}
+.unit.cooked .boom{background:var(--bad)}
+.unit.frozen .boom{background:#1d6f86}
+@keyframes urgent{from{box-shadow:0 0 0 0 transparent}to{box-shadow:0 0 0 5px color-mix(in srgb,var(--bad) 45%,transparent)}}
+.unit.coldwarn .furn{animation-name:urgentc}
+@keyframes urgentc{from{box-shadow:0 0 0 0 transparent}to{box-shadow:0 0 0 5px color-mix(in srgb,var(--ice) 50%,transparent)}}
+@keyframes shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-2px,1px) rotate(-2deg)}50%{transform:translate(2px,-1px) rotate(2deg)}75%{transform:translate(-1px,-1px) rotate(-1deg)}100%{transform:translate(0,0) rotate(0)}}
+@media (prefers-reduced-motion:reduce){.unit.hotwarn .furn,.unit.coldwarn .furn,.unit.cooked .furn,.unit.frozen .furn{animation:none}}
 .unit.valid .furn{border:2px dashed var(--brand);background:color-mix(in srgb,var(--brand) 14%,var(--bed))}
 .unit.valid .nm{color:var(--brand);font-weight:700}
 .unit.peek .tok{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 55%,transparent)}
@@ -1002,7 +1021,7 @@ function completeStep(st){
   p.done.push(st.m);
   afterMod(st, p);
 }
-function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; st.prog = 0; if (S.coach === st) S.coach = null; }
+function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; st.prog = 0; st.warn3 = false; st.pen = 0; if (S.coach === st) S.coach = null; }
 function afterMod(st, p){
   const bi = S.st.indexOf(st);
   clearSt(st);
@@ -1136,10 +1155,16 @@ function step(g){
     }
     if (st.doneAt == null && S.t >= st.start + st.dur) st.doneAt = st.start + st.dur;
     if (S.inspectUntil && st.doneAt != null && !st.insp && S.t - st.doneAt > 1.5){ st.insp = true; S.inspectHits++; msg(`主任皺著眉看${st.label}一直嗶……`, 'bad'); }
+    if ((st.m === 'heat' || st.m === 'ice') && st.ot){
+      // 熱死／凍死之後，每多放 1 分鐘再扣 3 分
+      st.pen = (st.pen || 0) + g;
+      while (st.pen >= 1){ st.pen -= 1; S.score -= 3; }
+    }
     if (st.doneAt != null && !st.ot){
       const ot = S.t - st.doneAt;
-      if (st.m === 'heat' && ot > 5){ st.ot = true; S.incidents++; S.score -= 20; msg(`${st.label} 熱敷超時！${st.p.name} 皮膚泛紅。`, 'bad'); }
-      else if (st.m === 'ice' && ot > 5){ st.ot = true; S.incidents++; S.score -= 20; msg(`${st.label} 冰敷太久！${st.p.name} 皮膚凍得又紅又麻。`, 'bad'); }
+      if ((st.m === 'heat' || st.m === 'ice') && ot > 3 && !st.warn3){ st.warn3 = true; msg(st.m === 'heat' ? `${st.label} 的${st.p.name}快熱死了！快去拿掉熱敷包！` : `${st.label} 的${st.p.name}快凍死了！快去拿掉冰袋！`, 'bad'); Music.buzz(); }
+      if (st.m === 'heat' && ot > 5){ st.ot = true; st.pen = 0; S.incidents++; S.score -= 20; msg(`${st.label} 熱死了！${st.p.name} 皮膚燙到發紅，-20 分，而且每多 1 分鐘再扣 3 分！`, 'bad'); Music.buzz(true); }
+      else if (st.m === 'ice' && ot > 5){ st.ot = true; st.pen = 0; S.incidents++; S.score -= 20; msg(`${st.label} 凍死了！${st.p.name} 皮膚凍到又紅又麻，-20 分，而且每多 1 分鐘再扣 3 分！`, 'bad'); Music.buzz(true); }
       else if (st.m !== 'heat' && st.m !== 'ice' && ot > 8){ st.ot = true; S.score -= 10; msg(`${st.label} 嗶了好久，${st.p.name} 自己按掉了……`, 'bad'); }
     }
   }
@@ -1256,7 +1281,7 @@ function finish(reason){
   const kicker = reason === 'back' ? '閃到腰，提早下班' : reason === 'early' ? '病人都清空了，提早收工' : `${fmt(S.end)} 準時下班`;
   $('endKicker').textContent = `${S.sh.name} #${S.code}・${kicker}`;
   const url = `${SHARE_URL}#${S.key}${S.code}`;
-  $('shareTxt').value = `我在〈不要說今天很閒〉${S.sh.name} #${S.code} 拿到 ${G.g}（${final} 分），你敢挑戰嗎？\n開始畫面輸入 ${S.code}、選${S.sh.name}，就會遇到一樣的病人（${GAME_VER}）\n${url}`;
+  $('shareTxt').value = `我在〈不要說今天很閒〉${S.sh.name} #${S.code} 拿到 ${G.g}（${final} 分），你敢挑戰嗎？\n開始畫面輸入 ${S.code}、選${S.sh.name}，就會遇到一樣的病人\n${url}`;
   $('shareLab').textContent = `分享這一診的挑戰碼 #${S.code}`;
   $('copyBtn').textContent = '複製挑戰文字';
   $('endCard').style.setProperty('--gc', G.c);
@@ -1295,8 +1320,8 @@ function buildRoom(){
       el.type = 'button'; el.dataset.i = i;
       el._base = `unit ${furn} u-${st.m}`; el.className = el._base + ' idle';
       el.style.setProperty('--mc', MODS[st.m].color);
-      el.innerHTML = `<span class="furn"><span class="tok" hidden></span><span class="lamp"></span><span class="prog"><i></i></span></span><span class="nm"></span><span class="tm"></span>`;
-      el._tok = el.querySelector('.tok'); el._nm = el.querySelector('.nm'); el._tm = el.querySelector('.tm'); el._bar = el.querySelector('.prog i');
+      el.innerHTML = `<span class="furn"><span class="tok" hidden></span><span class="lamp"></span><span class="prog"><i></i></span><span class="boom" hidden></span></span><span class="nm"></span><span class="tm"></span>`;
+      el._tok = el.querySelector('.tok'); el._nm = el.querySelector('.nm'); el._tm = el.querySelector('.tm'); el._bar = el.querySelector('.prog i'); el._boom = el.querySelector('.boom');
       box.appendChild(el); unitEls[i] = el;
     });
     zoneEls.push([z, zEl]);
@@ -1331,6 +1356,11 @@ function renderRoom(){
           const ot = Math.floor(S.t - st.doneAt);
           state = 'done' + (ot > 3 ? ' late' : '');
           tm = ot > 0 ? `嗶！超時${ot}分` : '嗶！點我';
+          if (st.m === 'heat' || st.m === 'ice'){
+            const hot = st.m === 'heat', otx = S.t - st.doneAt;
+            if (otx > 5){ state = hot ? 'done cooked' : 'done frozen'; tm = '快點我！'; }
+            else if (otx > 3){ state = 'done ' + (hot ? 'hotwarn' : 'coldwarn'); tm = hot ? `快熱死 ${Math.ceil(5 - otx)}分` : `快凍死 ${Math.ceil(5 - otx)}分`; }
+          }
         } else { state = 'run'; tm = `剩 ${Math.max(1, Math.ceil(st.dur - e))} 分`; }
       }
     }
@@ -1355,6 +1385,9 @@ function renderRoom(){
     const showTok = !!p && !walking;
     if (el._tok.hidden === showTok) el._tok.hidden = !showTok;
     setText(el._nm, nm); setText(el._tm, tm || ' ');
+    const boom = state.includes('cooked') ? '熱死了！' : state.includes('frozen') ? '凍死了！' : '';
+    if (el._boom.hidden === !!boom) el._boom.hidden = !boom;
+    if (boom) setText(el._boom, boom);
     el.title = p ? `${st.label}：${p.name}（${p.dx}）` : st.label;
     el._bar.style.width = (pct*100).toFixed(1) + '%';
   });
@@ -1652,6 +1685,12 @@ const Music = (() => {
     },
     stop(){ playing = false; clearInterval(timer); timer = null; },
     pause(){ if (ctx) ctx.suspend(); },
+    buzz(big){
+      if (!on || !init()) return;
+      ctx.resume();
+      const t = ctx.currentTime + 0.02, n = big ? 3 : 2;
+      for (let k = 0; k < n; k++) tone('sawtooth', big ? 220 : 330, t + k*0.18, 0.12, 0.35);
+    },
     ding(){
       if (!on || !init()) return;
       ctx.resume();
