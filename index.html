@@ -433,6 +433,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       <div class="actions">
         <button class="act" id="waterBtn" type="button"><b>喝水</b><small>1 分・會想上廁所</small></button>
         <button class="act" id="toiletBtn" type="button"><b>上廁所</b><small>3 分・膀胱清空</small></button>
+        <button class="act" id="coffeeBtn" type="button"><b>喝咖啡</b><small id="coffeeLab">剩 2 杯・體力 +30</small></button>
+        <button class="act" id="snackBtn" type="button"><b>吃零食</b><small id="snackLab">剩 3 包・體力 +20</small></button>
       </div>
       <div class="ticker" id="ticker">準備開診。</div>
     </aside>
@@ -468,7 +470,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
           <li><b>機器嗶嗶</b>就點一下，決定下一站或先回候診區。冷熱敷超時會受傷。</li>
           <li><b>超音波、徒手</b>（各 5 分鐘）要你親自做，離開就暫停，點床位回來繼續。</li>
           <li><b>整點下班</b>：最後 1 小時停止掛號，沒做完的治療每項扣 10 分。</li>
-          <li><b>突發狀況、喝水、上廁所</b>：跳電、主任巡房隨時會來；太渴、太急都會出事。</li>
+          <li><b>顧好自己</b>：體力會一直掉，喝咖啡、吃零食補體力；太渴、太急都會出事。</li>
         </ol>
       </div>
     </div>
@@ -787,7 +789,7 @@ function newGame(key, code){
   const sh = SHIFTS[key];
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null,
-    stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
+    stamina:100, coffee:COFFEE_MAX, snacks:SNACK_MAX, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
     nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
@@ -1045,7 +1047,7 @@ function beginMod(st, p){
   st.p = p; st.on = true; st.start = S.t + setup; st.dur = M.dur; st.doneAt = null; st.ot = false;
   S.back = clamp(S.back + M.back, 0, 100);
   if (st.m === 'heat'){ S.towels = Math.max(0, S.towels - 1); if (S.towels === 1) msg('乾淨毛巾只剩 1 條了，記得洗毛巾、折毛巾！', 'bad'); else if (S.towels === 0) msg('乾淨毛巾用完了！沒有毛巾就不能熱敷。', 'bad'); }
-  S.stamina = clamp(S.stamina - 0.6, 0, 100);
+  S.stamina = clamp(S.stamina - 1.0, 0, 100);
   S.throat = clamp(S.throat + 0.4, 0, 100);
   if (M.hands){
     setLock(`幫${p.name}${M.verb}`, setup + M.dur, () => { st.doneAt = S.t; completeStep(st); });
@@ -1148,7 +1150,9 @@ function step(g){
   S.t += g;
   if (S.lock && S.t >= S.lock.end){ const L = S.lock; S.lock = null; L.onDone && L.onDone(); }
   if (S.washer && S.t >= S.washer.until){ S.toFold += S.washer.n; msg(`洗衣機嗶嗶！${S.washer.n} 條毛巾洗好了，記得去折。`, 'good'); S.washer = null; Music.ding(); }
-  S.stamina = clamp(S.stamina - 0.1*g*(S.throat >= 100 ? 3 : 1), 0, 100);
+  S.stamina = clamp(S.stamina - 0.25*g*(S.throat >= 100 ? 2 : 1), 0, 100);
+  if (S.stamina < 30 && !S.warned.tired){ S.warned.tired = true; msg('體力快撐不住了，動作會變慢……喝杯咖啡或吃點零食吧！', 'bad'); }
+  if (S.stamina > 45) S.warned.tired = false;
   S.throat = clamp(S.throat + 0.5*g, 0, 100);
   S.bladder = clamp(S.bladder + 0.38*g, 0, 100);
   if (S.throat > 80 && !S.warned.thirst){ S.warned.thirst = true; msg('口好渴……擺位開始變慢了，找空檔喝口水。', 'bad'); }
@@ -1198,7 +1202,7 @@ function step(g){
     if (MODS[st.m].coach){
       if (S.coach === st && !S.lock && (S.power || !ELECTRIC[st.m])){
         st.prog += g / effMult();
-        S.back = clamp(S.back + 0.04*g, 0, 100); S.stamina = clamp(S.stamina - 0.06*g, 0, 100); S.throat = clamp(S.throat + 0.1*g, 0, 100);
+        S.back = clamp(S.back + 0.04*g, 0, 100); S.stamina = clamp(S.stamina - 0.1*g, 0, 100); S.throat = clamp(S.throat + 0.1*g, 0, 100);
         st.idle = 0;
         if (st.prog >= st.dur){ st.doneAt = S.t; S.coach = null; completeStep(st); }
       } else {
@@ -1590,6 +1594,10 @@ function render(){
   else setText($('lockLab'), '空檔中，可以安排病人');
   meter('mBlad','bBlad', S.bladder);
   $('toiletBtn').setAttribute('aria-disabled', String(!!L));
+  setText($('coffeeLab'), S.coffee ? `剩 ${S.coffee} 杯・體力 +30` : '今天喝完了');
+  setText($('snackLab'), S.snacks ? `剩 ${S.snacks} 包・體力 +20` : '零食吃光了');
+  $('coffeeBtn').setAttribute('aria-disabled', String(!!L || !S.coffee));
+  $('snackBtn').setAttribute('aria-disabled', String(!!L || !S.snacks));
   renderLaundry();
   $('waterBtn').setAttribute('aria-disabled', String(!!L));
   const inc = [];
@@ -1702,6 +1710,27 @@ $('room').addEventListener('click', e => {
   if (t.id === 'lFold') doFold(); else doWash();
 });
 const WASH_MIN = 15; // 洗衣機一輪幾分鐘
+// 補體力：咖啡、零食（每診有限量）
+const COFFEE_MAX = 2, SNACK_MAX = 3;
+$('coffeeBtn').addEventListener('click', () => {
+  if (!S || S.over) return; if (S.lock) return busy();
+  if (!S.coffee) return msg('今天的咖啡額度用完了，再喝會心悸。');
+  setLock('去茶水間沖咖啡', 1, () => {
+    S.coffee--; S.stamina = clamp(S.stamina + 30, 0, 100); S.bladder = clamp(S.bladder + 20, 0, 100);
+    msg('咖啡下肚，精神來了！不過等等會想上廁所。', 'good');
+  });
+});
+$('snackBtn').addEventListener('click', () => {
+  if (!S || S.over) return; if (S.lock) return busy();
+  if (!S.snacks) return msg('零食櫃已經空了。');
+  setLock('躲在櫃台後面吃零食', 1.5, () => {
+    S.snacks--; S.stamina = clamp(S.stamina + 20, 0, 100); S.throat = clamp(S.throat + 15, 0, 100);
+    if (RNG.play() < 0.3){
+      S.rushUntil = Math.max(S.rushUntil, S.t + 20); S.nextArr = Math.min(S.nextArr, S.t + 1);
+      msg('吃到家屬送的鳳梨酥……旺來！病人開始變多了！', 'bad');
+    } else msg('吃了幾片餅乾，體力回來一點，但嘴巴有點乾。', 'good');
+  });
+});
 $('toiletBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
   setLock('去上廁所', 3, () => { S.bladder = 0; S.back = clamp(S.back - 3, 0, 100); msg('上完廁所，順便伸展一下腰。', 'good'); });
@@ -1714,7 +1743,7 @@ $('speedBtn').addEventListener('click', () => {
 setSpeedLabel();
 $('waterBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
-  setLock('去茶水間喝水', 1, () => { S.throat = 0; S.stamina = clamp(S.stamina + 12, 0, 100); S.bladder = clamp(S.bladder + 25, 0, 100); msg('喝完水，活過來了。等等會想上廁所。', 'good'); });
+  setLock('去茶水間喝水', 1, () => { S.throat = 0; S.stamina = clamp(S.stamina + 5, 0, 100); S.bladder = clamp(S.bladder + 25, 0, 100); msg('喝完水，活過來了。等等會想上廁所。', 'good'); });
 });
 $('evGo').addEventListener('click', closeEvent);
 $('pauseBtn').addEventListener('click', () => { if (!S || S.over || modal) return; S.paused = true; $('pauseOv').hidden = false; Music.pause(); });
