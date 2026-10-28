@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="復健科診所物理治療師值班模擬遊戲：熱敷、電療、牽引、雷射、短波一起嗶，你只有一個人。">
 <meta property="og:title" content="不要說今天很閒｜物理治療師值班模擬">
-<meta property="og:description" content="熱敷、電療、拉腰、雷射同時在嗶，你只有一個人。撐過這一診！免費、免下載。">
+<meta property="og:description" content="熱敷、電療、腰椎牽引、雷射同時在嗶，你只有一個人。撐過這一診！免費、免下載。">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://janice880624.github.io/pt-clinic-game/share-cover.png">
 <meta property="og:image:width" content="1200">
@@ -13,7 +13,7 @@
 <meta property="og:image:alt" content="不要說今天很閒：物理治療師值班模擬遊戲的封面與遊戲畫面">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="不要說今天很閒｜物理治療師值班模擬">
-<meta name="twitter:description" content="熱敷、電療、拉腰、雷射同時在嗶，你只有一個人。撐過這一診！免費、免下載。">
+<meta name="twitter:description" content="熱敷、電療、腰椎牽引、雷射同時在嗶，你只有一個人。撐過這一診！免費、免下載。">
 <meta name="twitter:image" content="https://janice880624.github.io/pt-clinic-game/share-cover.png">
 <meta name="theme-color" content="#0D7175">
 <meta name="author" content="Janice">
@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
-/* Layout: 960×540 橫向遊戲舞台，等比縮放塞滿畫面 — 左邊俯視治療室（上排熱敷/電療/短波，下排拉腰/拉脖子/雷射），右邊候診區、處方卡與操作 */
+/* Layout: 960×540 橫向遊戲舞台，等比縮放塞滿畫面 — 左邊俯視治療室（上排熱敷/電療/短波，下排腰椎牽引/頸椎牽引/雷射），右邊候診區、處方卡與操作 */
 :root{
   --bg:#D9E1DE; --panel:#F8FAF9; --panel2:#ECF1EF; --ink:#1B2A30; --muted:#56676C; --line:#C6D2CF;
   --floor:#F1F4F2; --tile:rgba(27,42,48,.045); --wall:#4A5A60; --bed:#FFFFFF; --sheet:#DCE8EA; --avbg:#DDE7EA;
@@ -557,8 +557,8 @@ const MODS = {
   us:    { name:'超音波',   short:'超音波', dur:5,  setup:0,   back:0.4, color:'var(--us)',    order:2, verb:'打超音波', coach:true },
   sw:    { name:'短波',     short:'短波',   dur:15, setup:0.7, back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
   estim: { name:'電療',     short:'電療',   dur:15, setup:0.7, back:0.2, color:'var(--estim)', order:3, verb:'貼電極片' },
-  tracL: { name:'腰椎牽引', short:'拉腰',   dur:15, setup:1,   back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
-  tracC: { name:'頸椎牽引', short:'拉脖子', dur:15, setup:0.8, back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
+  tracL: { name:'腰椎牽引', short:'腰椎牽引', dur:15, setup:1,   back:2.5, color:'var(--trac)',  order:4, verb:'綁骨盆帶', needHeat:true },
+  tracC: { name:'頸椎牽引', short:'頸椎牽引', dur:15, setup:0.8, back:1,   color:'var(--neck)',  order:4, verb:'套頸椎牽引帶', needHeat:true },
   ex:    { name:'徒手治療', short:'徒手',   dur:5,  setup:0,   back:1.5, color:'var(--gym)',   order:6, verb:'做徒手治療', coach:true },
   laser: { name:'雷射',     short:'雷射',   dur:5,  setup:0.4, back:0.2, color:'var(--laser)', order:5, verb:'對準雷射' },
 };
@@ -571,9 +571,9 @@ const ZONES = [
   { m:'us',    name:'超音波',   n:1, cols:1, row:1, gc:'3', furn:'bed',   label:'超音波', stack:'sx' },
   { m:'sw',    name:'短波區',   n:2, cols:2, row:1, gc:'3', furn:'bed',   label:'短波', stack:'sx' },
   { m:'ex',    name:'徒手區',   n:1, cols:1, row:1, gc:'4', furn:'bed',   label:'徒手床', stack:'xl' },
-  { m:'tracL', name:'拉腰區',   n:3, cols:3, row:2, gc:'1',     furn:'long',  label:'腰椎牽引床' },
+  { m:'tracL', name:'腰椎牽引區', n:3, cols:3, row:2, gc:'1',     furn:'long',  label:'腰椎牽引床' },
   { m:'laser', name:'雷射區',   n:4, cols:4, row:2, gc:'2',     furn:'chair', label:'雷射' },
-  { m:'tracC', name:'拉脖子區', n:3, cols:3, row:2, gc:'3 / 5', furn:'chair', label:'頸椎牽引椅' },
+  { m:'tracC', name:'頸椎牽引區', n:3, cols:3, row:2, gc:'3 / 5', furn:'chair', label:'頸椎牽引椅' },
 ];
 
 // 病人：people = [稱呼, 最多等幾分鐘, 頭像造型]；rx = 每項治療開立的機率（保證 2–4 項；有牽引一定有熱敷）
@@ -628,7 +628,7 @@ const EVENTS = [
     { t:'「好啦，幫你換熱敷」', fx:{score:-12}, fb:'急性受傷初期常見腫脹，處方開冰敷就照處方，不能自己換成熱敷。' },
     { t:'解釋急性期先冰敷消腫，有疑問再請醫師說明', fx:{score:12,throat:8}, fb:'用病人聽得懂的方式解釋，處方調整交給醫師。', good:true },
   ]},
-  { id:'skipheat', who:'趕時間的上班族', say:'「我趕時間，熱敷可以跳過，直接拉腰嗎？」', choices:[
+  { id:'skipheat', who:'趕時間的上班族', say:'「我趕時間，熱敷可以跳過，直接做腰椎牽引嗎？」', choices:[
     { t:'「好啦，直接拉」', fx:{score:-12,incident:1}, fb:'牽引前先熱敷讓組織放鬆，是這間診所的流程，不能為了趕時間跳過。' },
     { t:'說明先熱敷的原因，幫他排最快的熱敷床', fx:{score:10,throat:6}, fb:'流程講清楚，病人比較願意配合。', good:true },
   ]},
@@ -636,7 +636,7 @@ const EVENTS = [
     { t:'開到最大', fx:{score:-12,incident:1}, fb:'強度不是越大越好，過強可能造成不適或皮膚刺激。' },
     { t:'調到明顯但可以忍受的刺麻感，順便檢查電極片', fx:{score:10,throat:4}, fb:'以病人可耐受、有明顯感覺為原則。還發現一片電極片快掉了。', good:true },
   ]},
-  { id:'neckweight', who:'拉脖子的大哥', say:'「這樣拉好像沒什麼感覺，重量再加重一點啦！」', when:running('tracC'), choices:[
+  { id:'neckweight', who:'做頸椎牽引的大哥', say:'「這樣拉好像沒什麼感覺，重量再加重一點啦！」', when:running('tracC'), choices:[
     { t:'「好，幫你加到最重」', fx:{score:-12,incident:1}, fb:'頸椎牽引重量要照處方，沒感覺不代表要加重，拉太重可能頭暈或更痛。' },
     { t:'照處方設定，說明有拉到就好，回診時再請醫師評估', fx:{score:10,throat:5}, fb:'重量依醫師處方，治療師依病人反應回報、再評估。', good:true },
   ]},
@@ -646,11 +646,11 @@ const EVENTS = [
     { t:'讓他先做，並跟候診病人道歉說明', fx:{vip:1,throat:8,score:3}, fb:'該插的還是插了，至少大家知道原因，比較不會客訴。', good:true },
     { t:'「不好意思，要照順序喔」', fx:{vip:1,score:-8,patience:-6,throat:6}, fb:'里長直接打電話給主任……最後還是讓他先做了。' },
   ]},
-  { id:'heavier', who:'拉腰中的上班族', say:'「這樣拉好像不夠力耶，重量可以再加重一點嗎？越重應該好越快吧？」', when:running('tracL'), choices:[
+  { id:'heavier', who:'做腰椎牽引的上班族', say:'「這樣拉好像不夠力耶，重量可以再加重一點嗎？越重應該好越快吧？」', when:running('tracL'), choices:[
     { t:'直接把重量往上加', fx:{score:-12,incident:1}, fb:'牽引重量要依處方和病人反應漸進調整，過重可能更不舒服。' },
     { t:'依處方設定，詢問感受後再評估是否調整', fx:{score:10,throat:5}, fb:'先確認牽引時的症狀變化，再決定要不要調整。', good:true },
   ]},
-  { id:'dizzy', who:'拉脖子的阿伯', say:'「欸……我拉一拉怎麼覺得頭有點暈、手麻麻的？」', when:running('tracC'), choices:[
+  { id:'dizzy', who:'做頸椎牽引的阿伯', say:'「欸……我做一做怎麼覺得頭有點暈、手麻麻的？」', when:running('tracC'), choices:[
     { t:'「忍一下，快好了」', fx:{score:-15,incident:1}, fb:'牽引中出現頭暈或麻木加劇要立刻處理，不能叫病人忍。' },
     { t:'立刻停止牽引，觀察症狀並回報醫師', fx:{score:14,throat:5,stamina:-3}, fb:'症狀變化時先停止、評估並通報，是牽引的安全原則。', good:true },
   ]},
@@ -760,7 +760,7 @@ function langEvent(p){
     { t:'比手畫腳，直接開始', fx:{score:-10}, fb:'病人一臉疑惑，治療一開始就嚇一跳……說明還是很重要。', run:c => startMod(c.st, c.p) },
   ]};
 }
-// 牽引重量：拉腰約體重 1/4、拉脖子約體重 1/7
+// 牽引重量：腰椎牽引約體重 1/4、頸椎牽引約體重 1/7
 const KG_RANGE = { granny:[45,60], grandpa:[55,72], auntie:[52,68], man:[65,85], woman:[48,62], student:[50,70], athlete:[60,80], foreigner:[60,85] };
 function bodyKg(p){
   if (!p.kg){ const [a,b] = KG_RANGE[p.look] || [55,75]; let h = p.id * 2654435761 >>> 0; for (const ch of p.name) h = (h ^ ch.charCodeAt(0)) * 16777619 >>> 0; p.kg = a + (h % (b - a + 1)); }
@@ -769,7 +769,7 @@ function bodyKg(p){
 function weightEvent(st, p){
   const kg = bodyKg(p), L = st.m === 'tracL', div = L ? 4 : 7, ok = Math.round(kg / div);
   const hi = Math.round(kg / (L ? 2 : 3)), lo = Math.max(1, Math.round(kg / (L ? 10 : 15)));
-  const name = L ? '拉腰' : '拉脖子', f = `${name}約體重的 1/${div}：${kg} ÷ ${div} ≈ ${ok} 公斤`;
+  const name = L ? '腰椎牽引' : '頸椎牽引', f = `${name}約體重的 1/${div}：${kg} ÷ ${div} ≈ ${ok} 公斤`;
   const ch = [
     { t:`${ok} 公斤`, fx:{score:8}, fb:`正確！${f}。實際重量仍以醫師處方和病人反應為準。`, good:true, run:c => { c.p.trac = ok; startMod(c.st, c.p); } },
     { t:`${hi} 公斤`, fx:{score:-12,incident:1}, fb:`太重了！${f}。拉太重可能更痛${L ? '' : '、頭暈'}。`, run:c => { c.p.trac = ok; startMod(c.st, c.p); } },
