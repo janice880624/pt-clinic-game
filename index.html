@@ -465,9 +465,9 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         <ol class="howto">
           <li><b>安排床位</b>：點病人，再點發亮的床位；直接點空床會排最等不及的人。</li>
           <li><b>每次上機都要你擺位</b>：包熱敷包、貼電極、綁牽引帶時不能做別的事。</li>
-          <li><b>冰敷還是熱敷，由你判斷</b>：有紅腫熱痛冰敷，慢性痠痛熱敷。熱敷要用乾淨毛巾，記得洗、折。</li>
+          <li><b>冰敷還是熱敷，由你判斷</b>：有紅腫熱痛冰敷，慢性痠痛熱敷。熱敷要用乾淨毛巾（洗、折）；冰袋 10 個，用過要冷卻 15 分鐘。</li>
           <li><b>牽引</b>：要先熱敷，熱敷完馬上牽引，中間不能插別的項目；做過熱敷不做短波。</li>
-          <li><b>機器嗶嗶</b>就點一下，決定下一站或先回候診區。冷熱敷超時會受傷。</li>
+          <li><b>機器嗶嗶</b>就點一下，決定下一站或先回候診區。冰敷、熱敷超時會受傷。</li>
           <li><b>超音波、徒手</b>（各 5 分鐘）要你親自做，離開就暫停，點床位回來繼續。</li>
           <li><b>整點下班</b>：最後 1 小時停止掛號，沒做完的治療每項扣 10 分。</li>
           <li><b>顧好自己</b>：體力會一直掉，喝咖啡、吃零食補體力；太渴、太急都會出事。</li>
@@ -552,7 +552,7 @@ const SHIFTS = {
 // 治療項目：dur = 治療分鐘；setup = 你擺位要花的分鐘；back = 擺位對腰的負擔
 const MODS = {
   heat:  { name:'熱敷',     short:'熱敷',   dur:15, setup:0.7, back:0.8, color:'var(--heat)',  order:1, verb:'包熱敷包' },
-  pack:  { name:'冰敷或熱敷', short:'冷/熱敷', color:'var(--muted)', order:1, virtual:true },
+  pack:  { name:'冰敷或熱敷', short:'冰/熱敷', color:'var(--muted)', order:1, virtual:true },
   ice:   { name:'冰敷',     short:'冰敷',   dur:15, setup:0.7, back:0.6, color:'var(--ice)',   order:1, verb:'敷冰袋' },
   us:    { name:'超音波',   short:'超音波', dur:5,  setup:0,   back:0.4, color:'var(--us)',    order:2, verb:'打超音波', coach:true },
   sw:    { name:'短波',     short:'短波',   dur:15, setup:0.7, back:0.3, color:'var(--sw)',    order:2, verb:'擺短波機頭' },
@@ -788,7 +788,7 @@ function newGame(key, code){
   lastShift = key; pendingEv = []; modal = null;
   const sh = SHIFTS[key];
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
-    st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null,
+    st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null, iceUsing:0, iceCooling:[],
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
     nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
@@ -800,11 +800,11 @@ function newGame(key, code){
 
 function pick(arr, wf, rng = RNG.pat){ const tot = arr.reduce((s,x) => s + wf(x), 0); let r = rng()*tot; for (const x of arr){ r -= wf(x); if (r < 0) return x; } return arr[0]; }
 // 急性受傷：熱敷改冰敷，不做牽引、短波
-// 處方裡的熱敷改成「冷/熱敷」(pack)，由玩家依症狀判斷；冷熱敷和短波不同時開
+// 處方裡的熱敷改成「冰/熱敷」(pack)，由玩家依症狀判斷；冰熱敷和短波不同時開
 function genRx(rx, acute, rng = RNG.pat){
   rx = { ...rx };
   if ('heat' in rx){ rx.pack = rx.heat; delete rx.heat; }
-  // 急性期（紅腫熱痛）：冷熱敷、一定安排雷射，不做牽引、短波、超音波
+  // 急性期（紅腫熱痛）：冰熱敷、一定安排雷射，不做牽引、短波、超音波
   if (acute){ delete rx.tracL; delete rx.tracC; delete rx.sw; delete rx.us; delete rx.ex; rx.pack = 0.95; rx.laser = 1; }
   const ent = Object.entries(rx).sort((a,b) => b[1]-a[1]);
   let got = ent.filter(([,pr]) => rng() < pr).map(([m]) => m);
@@ -887,8 +887,12 @@ function blockReason(p, m){
   return '';
 }
 function canDo(p, m){ return blockReason(p, m) === ''; }
-const TOWEL_START = 6; // 開診時折好的乾淨毛巾
-function usable(st){ return !st.broken && !(st.m === 'heat' && (S.heatLow || S.towels <= 0)) && !(!S.power && ELECTRIC[st.m]); }
+const TOWEL_START = 8; // 開診時折好的乾淨毛巾（熱敷包用）
+const ICE_PACKS = 10, ICE_COOL = 15; // 冰袋總數；用過要放回冷凍庫冷卻幾分鐘
+const iceReady = () => ICE_PACKS - S.iceUsing - S.iceCooling.length;
+// 冰敷做完：冰袋放回冷凍庫冷卻
+function releaseIce(){ if (S.iceUsing > 0){ S.iceUsing--; S.iceCooling.push(S.t + ICE_COOL); S.iceCooling.sort((a,b) => a - b); } }
+function usable(st){ return !st.broken && !(st.m === 'heat' && (S.heatLow || S.towels <= 0)) && !(st.m === 'ice' && iceReady() <= 0) && !(!S.power && ELECTRIC[st.m]); }
 function valid(st, p){ return !st.p && usable(st) && canDo(p, st.m); }
 
 function assign(st, p){
@@ -978,7 +982,7 @@ function layoutHall(){
   const hv = $('hallV'); hv.style.top = (dTop - 14) + 'px'; hv.style.height = (top + h - dTop + 14) + 'px';
   const ld = $('ldoor'); ld.style.top = (G.doorY - lob.y - 4 - 14) + 'px'; ld.style.left = '-5px';
 }
-// 判斷冷熱敷；放錯時扣分、說明，並自動改排到正確的床位（客滿就先回候診區）
+// 判斷冰熱敷；放錯時扣分、說明，並自動改排到正確的床位（客滿就先回候診區）
 function judgePack(p, st){
   const m = st.m, right = p.inflamed ? 'ice' : 'heat';
   if (m === right){
@@ -993,6 +997,7 @@ function judgePack(p, st){
     : `${p.name}「${p.sym}」，沒有紅腫熱痛，慢性痠痛熱敷比較適合。`;
   // 取消放錯的床位（用掉的毛巾丟進髒衣籃）
   if (m === 'heat') S.dirty++;
+  if (m === 'ice') releaseIce();
   clearSt(st); S.lock = null;
   const free = S.st.find(s => s.m === right && !s.p && usable(s));
   let fix;
@@ -1004,7 +1009,7 @@ function judgePack(p, st){
     S.queue.unshift(p);
     fix = `${MODS[right].name}床目前都滿了，先請${p.name}回候診區等空床。`;
   }
-  showNotice('冷熱敷判斷錯誤', `${why}\n${fix}`);
+  showNotice('冰熱敷判斷錯誤', `${why}\n${fix}`);
   return { to: free || null };
 }
 // 需要按「我知道了」才關閉，期間遊戲暫停
@@ -1050,6 +1055,7 @@ function beginMod(st, p){
   const M = MODS[st.m], setup = M.setup * effMult();
   st.p = p; st.on = true; st.start = S.t + setup; st.dur = M.dur; st.doneAt = null; st.ot = false;
   S.back = clamp(S.back + M.back, 0, 100);
+  if (st.m === 'ice'){ S.iceUsing++; const r = iceReady(); if (r === 1) msg('冰袋只剩 1 個了，用過的還在冷凍庫冷卻。', 'bad'); else if (r === 0) msg('冰袋都用完了！要等冷凍庫的冰袋冷卻好。', 'bad'); }
   if (st.m === 'heat'){ S.towels = Math.max(0, S.towels - 1); if (S.towels === 1) msg('乾淨毛巾只剩 1 條了，記得洗毛巾、折毛巾！', 'bad'); else if (S.towels === 0) msg('乾淨毛巾用完了！沒有毛巾就不能熱敷。', 'bad'); }
   S.stamina = clamp(S.stamina - 1.0, 0, 100);
   S.throat = clamp(S.throat + 0.4, 0, 100);
@@ -1072,6 +1078,7 @@ function completeStep(st){
   p.rem = p.rem.filter(m => m !== remKey(st.m));
   p.done.push(st.m);
   if (st.m === 'heat') S.dirty++;
+  if (st.m === 'ice') releaseIce();
   afterMod(st, p);
 }
 function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; st.prog = 0; st.warn3 = false; st.pen = 0; if (S.coach === st) S.coach = null; }
@@ -1117,7 +1124,7 @@ function renderPicker(force){
   if (S.over || !S.queue.includes(p) || S.sel !== p.id){ closePicker(); return; }
   const opts = p.rem.flatMap(m => m === 'pack' ? ['heat', 'ice'] : [m]).map(m => {
     const n = freeCount(m), blocked = !canDo(p, m);
-    return { m, n, blocked, note: blocked ? ({ swAfterHeat:'做過熱敷', tracFirst:'先去牽引', needHeat:'要先熱敷' }[blockReason(p, m)] || '不能做') : n ? `空床 ${n}` : (m === 'heat' && S.towels <= 0 ? '沒毛巾' : '客滿') };
+    return { m, n, blocked, note: blocked ? ({ swAfterHeat:'做過熱敷', tracFirst:'先去牽引', needHeat:'要先熱敷' }[blockReason(p, m)] || '不能做') : n ? `空床 ${n}` : (m === 'heat' && S.towels <= 0 ? '沒毛巾' : m === 'ice' && iceReady() <= 0 ? '沒冰袋' : '客滿') };
   }).sort((a,b) => byOrder(a.m, b.m));
   const key = opts.map(o => o.m + o.note).join('|') + (S.lock ? 'L' : '');
   if (!force && key === PK.key) return;
@@ -1153,6 +1160,7 @@ $('pkOpts').addEventListener('click', e => {
 function step(g){
   S.t += g;
   if (S.lock && S.t >= S.lock.end){ const L = S.lock; S.lock = null; L.onDone && L.onDone(); }
+  if (S.iceCooling.length && S.t >= S.iceCooling[0]){ const n = S.iceCooling.filter(t => S.t >= t).length; S.iceCooling = S.iceCooling.filter(t => S.t < t); msg(`${n} 個冰袋在冷凍庫冷卻好了，可以再用。`, 'good'); }
   if (S.washer && S.t >= S.washer.until){ S.toFold += S.washer.n; msg(`洗衣機嗶嗶！${S.washer.n} 條毛巾洗好了，記得去折。`, 'good'); S.washer = null; Music.ding(); }
   S.stamina = clamp(S.stamina - 0.25*g*(S.throat >= 100 ? 2 : 1), 0, 100);
   if (S.stamina < 30 && !S.warned.tired){ S.warned.tired = true; msg('體力快撐不住了，動作會變慢……喝杯咖啡或吃點零食吧！', 'bad'); }
@@ -1377,7 +1385,7 @@ function finish(reason){
   if (leftItems) notes.push(`${left} 位病人還有 ${leftItems} 項治療沒做完，每項扣 10 分。`);
   if (S.incidents) notes.push(`有 ${S.incidents} 件異常事件要寫報告。`);
   if (S.collapse) notes.push(`體力透支 ${S.collapse} 次，記得找空檔補充體力。`);
-  if (S.judgeOk || S.judgeBad) notes.push(`冷熱敷判斷：對 ${S.judgeOk || 0} 次、錯 ${S.judgeBad || 0} 次。`);
+  if (S.judgeOk || S.judgeBad) notes.push(`冰熱敷判斷：對 ${S.judgeOk || 0} 次、錯 ${S.judgeBad || 0} 次。`);
   if (!notes.length) notes.push('病人全部做完，準時打卡。');
   $('endNote').textContent = notes.join(' ');
   $('endOv').hidden = false;
@@ -1511,7 +1519,7 @@ function renderRoom(){
   });
   zoneEls.forEach(([z, zEl]) => {
     const all = S.st.filter(s => s.m === z.m), used = all.filter(s => s.p).length;
-    setText(zEl._count, z.m === 'heat' ? `${used}/${all.length}・毛巾 ${S.towels}` : `${used}/${all.length}`);
+    setText(zEl._count, z.m === 'heat' ? `${used}/${all.length}・毛巾 ${S.towels}` : z.m === 'ice' ? `${used}/${all.length}・冰袋 ${iceReady()}` + (S.iceCooling.length ? `（冷卻 ${S.iceCooling.length}）` : '') : `${used}/${all.length}`);
   });
 }
 
@@ -1571,7 +1579,7 @@ function renderCard(){
   const chips = p.rx.map(m => {
     if (m === 'pack'){
       const used = p.done.find(x => x === 'heat' || x === 'ice') || (st && (st.m === 'heat' || st.m === 'ice') ? st.m : null);
-      if (!used) return `<i class="pk2">冷/熱敷</i>`;
+      if (!used) return `<i class="pk2">冰/熱敷</i>`;
       return `<i class="${p.done.includes(used) ? 'done' : 'now'}" style="--c:${MODS[used].color}">${MODS[used].short}</i>`;
     }
     const c = p.cut.includes(m) ? 'cut' : p.done.includes(m) ? 'done' : (st && st.m === m) ? 'now' : '';
@@ -1670,6 +1678,9 @@ $('room').addEventListener('click', e => {
     return;
   }
   if (S.lock) return busy();
+  if (st.m === 'ice' && iceReady() <= 0 && !st.broken){
+    return msg(`冰袋都在用或在冷凍庫冷卻，最快 ${Math.max(1, Math.ceil(Math.min(...S.iceCooling, S.t + ICE_COOL) - S.t))} 分鐘後有冰袋。`, 'bad');
+  }
   if (st.m === 'heat' && !S.heatLow && S.towels <= 0 && !st.broken){
     return msg('沒有乾淨毛巾，不能熱敷！先去洗毛巾、折毛巾。', 'bad');
   }
