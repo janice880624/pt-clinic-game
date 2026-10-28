@@ -244,7 +244,10 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   background:color-mix(in srgb,var(--brand) 6%,var(--floor));display:flex;flex-direction:column;gap:6px}
 .lobby .room-sign{left:10px}
 .lobby-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
-.lobby-top small{font-size:11px;color:var(--muted)}
+.lobby-top small{font-size:11px;color:var(--muted);white-space:nowrap}
+.intern{position:absolute;top:-12px;right:12px;z-index:2;font:inherit;font-size:11px;font-weight:700;line-height:1.5;padding:1px 7px;border-radius:999px;border:1.5px solid var(--brand);background:var(--panel);color:var(--brand);cursor:pointer;white-space:nowrap}
+.intern.on{background:var(--brand);color:var(--brand-ink)}
+.intern:disabled{opacity:.45;cursor:default}
 .callboard{display:flex;align-items:baseline;gap:3px;background:var(--led-bg);border:2px solid var(--wall);border-radius:5px;padding:1px 8px;white-space:nowrap;color:var(--led-dim);font-size:10px;min-width:0}
 .callboard b{font-family:var(--f-mono);font-weight:600;font-size:16px;color:var(--led);letter-spacing:.06em;line-height:1.25}
 #callTo{color:var(--led);font-size:11px;font-weight:700;margin-left:3px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
@@ -387,12 +390,12 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 #rotate .phone{width:44px;height:72px;border:4px solid var(--ink);border-radius:10px;margin:0 auto 16px;animation:turn 2.4s ease-in-out infinite}
 #rotate h2{font-family:var(--f-disp);font-weight:400;font-size:24px;margin:0 0 6px}
 #rotate p{margin:0 0 16px;color:var(--muted)}
-@keyframes turn{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
-@media (prefers-reduced-motion:reduce){.unit.done .furn,.unit.done .lamp,.ticker.flash,#rotate .phone{animation:none}.track i{transition:none}}
-</style>
 </head>
 <body>
 
+@keyframes turn{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (prefers-reduced-motion:reduce){.unit.done .furn,.unit.done .lamp,.ticker.flash,#rotate .phone{animation:none}.track i{transition:none}}
+</style>
 
 <div id="stage">
   <header class="hud">
@@ -425,6 +428,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       <div class="lobby" id="lobby">
         <span class="doorway" id="ldoor"></span>
         <span class="room-sign">候診區</span>
+        <button type="button" class="intern" id="internBtn">叫實習生 ×2</button>
         <div class="lobby-top"><small id="qCount">0 人候診</small><span class="callboard" id="callboard"><small>請</small><b id="callNo">---</b><small>號</small><span id="callTo">治療室</span></span></div>
         <div class="seats" id="seats"></div>
         <span class="door" id="door"></span>
@@ -469,6 +473,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
           <li><b>牽引</b>：要先熱敷，熱敷完馬上牽引，中間不能插別的項目；做過熱敷不做短波。</li>
           <li><b>機器嗶嗶</b>就點一下，決定下一站或先回候診區。冰敷、熱敷超時會受傷。</li>
           <li><b>超音波、徒手</b>（各 5 分鐘）要你親自做，離開就暫停，點床位回來繼續。</li>
+          <li><b>實習生</b>：每診可以叫 2 次，每次幫忙 30 秒，自動收掉做完的機器。</li>
           <li><b>整點下班</b>：最後 1 小時停止掛號，沒做完的治療每項扣 10 分。</li>
           <li><b>顧好自己</b>：體力會一直掉，喝咖啡、吃零食補體力；太渴、太急都會出事。</li>
         </ol>
@@ -828,7 +833,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v8'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v9'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -864,7 +869,7 @@ function newGame(key, code){
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null, iceUsing:0, iceCooling:[],
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
-    nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
+    nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, internLeft:INTERN_USES, internUntil:0, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
   spawn(); spawn(); spawn(); if (key === 'am') spawn();
@@ -1164,6 +1169,29 @@ function completeStep(st){
   if (st.m === 'ice') releaseIce();
   afterMod(st, p);
 }
+// 實習生：幫忙約 30 秒（真實時間），自動收掉做完的機器；下一站仍由你決定
+const INTERN_USES = 2, INTERN_SEC = 30;
+function internTick(){
+  S.st.forEach((st, bi) => {
+    if (!st.p || !st.on || st.doneAt == null || MODS[st.m].hands || S.t - st.doneAt < 0.3) return;
+    const p = st.p;
+    if (st.m === 'heat' && p.sleepy) p.woke = true;
+    S.score += 10;
+    p.rem = p.rem.filter(m => m !== remKey(st.m)); p.done.push(st.m);
+    if (st.m === 'heat') S.dirty++;
+    if (st.m === 'ice') releaseIce();
+    if (!p.rem.length){ afterMod(st, p); return; }
+    clearSt(st);
+    p.patience = Math.max(p.patience, 75);
+    S.queue.unshift(p); p.atBed = bi; walkBack(p);
+    msg(`實習生幫 ${p.name} 收好${MODS[st.m].short}，請他回候診區等下一站。`, 'good');
+  });
+}
+$('internBtn').addEventListener('click', () => {
+  if (!S || S.over || S.internUntil || S.internLeft <= 0) return;
+  S.internLeft--; S.internUntil = S.t + INTERN_SEC / SPEEDS[speedIdx].sec;
+  msg('實習生來幫忙了！接下來 30 秒，做完的機器他會幫你收（下一站還是要你排）。', 'good');
+});
 function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; st.prog = 0; st.warn3 = false; st.pen = 0; if (S.coach === st) S.coach = null; }
 function afterMod(st, p){
   const bi = S.st.indexOf(st);
@@ -1245,6 +1273,7 @@ function step(g){
   if (S.lock && S.t >= S.lock.end){ const L = S.lock; S.lock = null; L.onDone && L.onDone(); }
   if (S.iceCooling.length && S.t >= S.iceCooling[0]){ const n = S.iceCooling.filter(t => S.t >= t).length; S.iceCooling = S.iceCooling.filter(t => S.t < t); msg(`${n} 個冰袋在冷凍庫冷卻好了，可以再用。`, 'good'); }
   if (S.washer && S.t >= S.washer.until){ S.toFold += S.washer.n; msg(`洗衣機嗶嗶！${S.washer.n} 條毛巾洗好了，記得去折。`, 'good'); S.washer = null; Music.ding(); }
+  if (S.internUntil){ if (S.t >= S.internUntil){ S.internUntil = 0; msg('實習生去跟別的治療師了。', ''); } else internTick(); }
   S.stamina = clamp(S.stamina - 0.25*g*(S.throat >= 100 ? 2 : 1), 0, 100);
   if (S.stamina < 30 && !S.warned.tired){ S.warned.tired = true; msg('體力快撐不住了，動作會變慢……喝杯咖啡或吃點零食吧！', 'bad'); }
   if (S.stamina > 45) S.warned.tired = false;
@@ -1644,6 +1673,8 @@ function renderSeats(){
     el._ring.style.setProperty('--pc', pc > 55 ? 'var(--good)' : pc > 25 ? 'var(--warn)' : 'var(--bad)');
   });
   setText($('qCount'), `${S.queue.length} 人候診`);
+  { const b = $('internBtn'), on = !!S.internUntil, sec = on ? Math.ceil((S.internUntil - S.t) * SPEEDS[speedIdx].sec) : 0;
+    setText(b, on ? `實習生 ${sec} 秒` : `叫實習生 ×${S.internLeft}`); b.classList.toggle('on', on); b.disabled = !on && S.internLeft <= 0; }
 }
 
 function renderCard(){
