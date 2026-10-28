@@ -862,15 +862,19 @@ function spawn(urgent, front, opts){
   front ? S.queue.unshift(p) : S.queue.push(p);
 }
 
-function effMult(){ return 1 + (S.stamina < 30 ? 0.5 : 0) + S.back/200 + (S.throat > 80 ? 0.25 : 0) + (S.bladder > 85 ? 0.25 : 0); }
+// 體力 50% 以下腳步變慢、動作變慢；越累越慢
+const tiredMult = () => S.stamina < 25 ? 1.7 : S.stamina < 50 ? 1.35 : 1;
+function effMult(){ return tiredMult() + S.back/200 + (S.throat > 80 ? 0.25 : 0) + (S.bladder > 85 ? 0.25 : 0); }
 // 離開超音波／徒手床：倒數暫停，要點床位回來才會繼續
 function leaveCoach(){
   if (!S || !S.coach) return;
   const c = S.coach; S.coach = null;
   if (c.p) msg(`先暫停${MODS[c.m].name}，${c.p.name}躺著等你回來。`);
 }
-function setLock(label, dur, onDone){
+function setLock(label, dur, onDone, raw){
   leaveCoach();
+  // 累的時候走去做任何事都比較慢（擺位已在 effMult 計算，不重複）
+  if (!raw && S.stamina < 50) dur *= tiredMult();
   S.lock = { label, start:S.t, end:S.t+dur, onDone }; S.sel = null;
 }
 // 熱敷做完、還沒牽引：下一站只能是牽引（中間不能插別的項目）
@@ -1153,6 +1157,20 @@ function step(g){
   S.stamina = clamp(S.stamina - 0.25*g*(S.throat >= 100 ? 2 : 1), 0, 100);
   if (S.stamina < 30 && !S.warned.tired){ S.warned.tired = true; msg('體力快撐不住了，動作會變慢……喝杯咖啡或吃點零食吧！', 'bad'); }
   if (S.stamina > 45) S.warned.tired = false;
+  if (S.stamina < 50 && !S.warned.slow){ S.warned.slow = true; msg('體力剩一半，腳步開始變慢了……', 'bad'); }
+  if (S.stamina > 60) S.warned.slow = false;
+  if (S.stamina <= 0 && !S.lock && !modal){
+    // 體力歸零：走不動，強制坐下來吃東西
+    S.collapse = (S.collapse || 0) + 1; S.score -= 15;
+    const food = S.snacks > 0 ? 'snack' : S.coffee > 0 ? 'coffee' : 'rest';
+    showAlert('走不動了', food === 'rest' ? '體力歸零，零食和咖啡都沒了，只能坐著休息 4 分鐘' : `體力歸零，只好坐下來${food === 'snack' ? '吃零食' : '喝咖啡'}，3 分鐘不能動`, '體力透支');
+    msg('體力透支！走不動了，-15 分。', 'bad');
+    setLock('累到走不動，坐下來補充體力', food === 'rest' ? 4 : 3, () => {
+      if (food === 'snack') S.snacks--; else if (food === 'coffee') S.coffee--;
+      S.stamina = food === 'rest' ? 25 : 40;
+      msg('終於緩過來了，回去看病人。', 'good');
+    }, true);
+  }
   S.throat = clamp(S.throat + 0.5*g, 0, 100);
   S.bladder = clamp(S.bladder + 0.38*g, 0, 100);
   if (S.throat > 80 && !S.warned.thirst){ S.warned.thirst = true; msg('口好渴……擺位開始變慢了，找空檔喝口水。', 'bad'); }
@@ -1285,7 +1303,7 @@ function openEvent(ev, ctx){
   if (modal){ pendingEv.push([ev, ctx]); return; }
   modal = { ev, ctx };
   if (ev.id) S.used.add(ev.id);
-  $('evWho').textContent = ctx ? `${ctx.p.name}・${ev.who}` : ev.who;
+  $('evWho').textContent = ctx && ctx.p ? `${ctx.p.name}・${ev.who}` : ev.who;
   $('evSay').textContent = ev.say;
   const box = $('evChoices'); box.innerHTML = ''; box.hidden = false;
   ev.choices.forEach((c, i) => {
@@ -1360,6 +1378,7 @@ function finish(reason){
   const notes = [];
   if (leftItems) notes.push(`${left} 位病人還有 ${leftItems} 項治療沒做完，每項扣 10 分。`);
   if (S.incidents) notes.push(`有 ${S.incidents} 件異常事件要寫報告。`);
+  if (S.collapse) notes.push(`體力透支 ${S.collapse} 次，記得找空檔補充體力。`);
   if (S.judgeOk || S.judgeBad) notes.push(`冷熱敷判斷：對 ${S.judgeOk || 0} 次、錯 ${S.judgeBad || 0} 次。`);
   if (!notes.length) notes.push('病人全部做完，準時打卡。');
   $('endNote').textContent = notes.join(' ');
@@ -1591,7 +1610,7 @@ function render(){
     setText($('lockLab'), `幫${S.coach.p.name}${MODS[S.coach.m].verb}・剩 ${Math.max(1, Math.ceil(S.coach.dur - S.coach.prog))} 分`);
     $('lockBar').style.width = (clamp(S.coach.prog / S.coach.dur, 0, 1)*100) + '%';
   }
-  else setText($('lockLab'), '空檔中，可以安排病人');
+  else setText($('lockLab'), S.stamina < 50 ? '空檔中・體力不足，動作變慢' : '空檔中，可以安排病人');
   meter('mBlad','bBlad', S.bladder);
   $('toiletBtn').setAttribute('aria-disabled', String(!!L));
   setText($('coffeeLab'), S.coffee ? `剩 ${S.coffee} 杯・體力 +30` : '今天喝完了');
@@ -1711,6 +1730,10 @@ $('room').addEventListener('click', e => {
 });
 const WASH_MIN = 15; // 洗衣機一輪幾分鐘
 // 補體力：咖啡、零食（每診有限量）
+const PINE_EVENT = { who:'櫃台小姐', say:'「家屬送了一盒鳳梨酥耶！大家快來吃～」', choices:[
+  { t:'吃一塊鳳梨酥（體力 +30）', fx:{ stamina:30, throat:10, rush:20 }, fb:'好吃！……可是候診區好像開始旺來了。' },
+  { t:'婉拒，改吃自己帶的餅乾（體力 +20）', fx:{ stamina:20, throat:15 }, fb:'上班不吃鳳梨，復健科也一樣。', good:true },
+]};
 const COFFEE_MAX = 2, SNACK_MAX = 3;
 $('coffeeBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
@@ -1724,11 +1747,10 @@ $('snackBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
   if (!S.snacks) return msg('零食櫃已經空了。');
   setLock('躲在櫃台後面吃零食', 1.5, () => {
-    S.snacks--; S.stamina = clamp(S.stamina + 20, 0, 100); S.throat = clamp(S.throat + 15, 0, 100);
-    if (RNG.play() < 0.3){
-      S.rushUntil = Math.max(S.rushUntil, S.t + 20); S.nextArr = Math.min(S.nextArr, S.t + 1);
-      msg('吃到家屬送的鳳梨酥……旺來！病人開始變多了！', 'bad');
-    } else msg('吃了幾片餅乾，體力回來一點，但嘴巴有點乾。', 'good');
+    S.snacks--;
+    if (RNG.play() < 0.3) return openEvent(PINE_EVENT, {});
+    S.stamina = clamp(S.stamina + 20, 0, 100); S.throat = clamp(S.throat + 15, 0, 100);
+    msg('吃了幾片餅乾，體力回來一點，但嘴巴有點乾。', 'good');
   });
 });
 $('toiletBtn').addEventListener('click', () => {
