@@ -632,7 +632,17 @@ const EVENTS = [
     { t:'開到最大', fx:{score:-12,incident:1}, fb:'強度不是越大越好，過強可能造成不適或皮膚刺激。' },
     { t:'調到明顯但可以忍受的刺麻感，順便檢查電極片', fx:{score:10,throat:4}, fb:'以病人可耐受、有明顯感覺為原則。還發現一片電極片快掉了。', good:true },
   ]},
-  { id:'heavier', who:'拉腰中的上班族', say:'「可以拉重一點嗎？越重應該好越快吧？」', when:running('tracL'), choices:[
+  { id:'neckweight', who:'拉脖子的大哥', say:'「這樣拉好像沒什麼感覺，重量再加重一點啦！」', when:running('tracC'), choices:[
+    { t:'「好，幫你加到最重」', fx:{score:-12,incident:1}, fb:'頸椎牽引重量要照處方，沒感覺不代表要加重，拉太重可能頭暈或更痛。' },
+    { t:'照處方設定，說明有拉到就好，回診時再請醫師評估', fx:{score:10,throat:5}, fb:'重量依醫師處方，治療師依病人反應回報、再評估。', good:true },
+  ]},
+  // 大人物插隊：拒絕不了，只能選怎麼收拾；不是每局都會遇到
+  { id:'vip', chance:0.45, who:'櫃台小姐（小聲）', say:'「里長伯來了，說他趕時間要先做……主任剛剛打電話交代要給他方便。」', when:() => S.t < S.end - LAST_CALL && S.arrived < MAX_PATIENTS, choices:[
+    { t:'笑著說「好的，這邊請」，直接讓他先做', fx:{vip:1,patience:-12}, fb:'候診的人臉都綠了，但這關你也拒絕不了。' },
+    { t:'讓他先做，並跟候診病人道歉說明', fx:{vip:1,throat:8,score:3}, fb:'該插的還是插了，至少大家知道原因，比較不會客訴。', good:true },
+    { t:'「不好意思，要照順序喔」', fx:{vip:1,score:-8,patience:-6,throat:6}, fb:'里長直接打電話給主任……最後還是讓他先做了。' },
+  ]},
+  { id:'heavier', who:'拉腰中的上班族', say:'「這樣拉好像不夠力耶，重量可以再加重一點嗎？越重應該好越快吧？」', when:running('tracL'), choices:[
     { t:'直接把重量往上加', fx:{score:-12,incident:1}, fb:'牽引重量要依處方和病人反應漸進調整，過重可能更不舒服。' },
     { t:'依處方設定，詢問感受後再評估是否調整', fx:{score:10,throat:5}, fb:'先確認牽引時的症狀變化，再決定要不要調整。', good:true },
   ]},
@@ -831,7 +841,8 @@ const LAST_CALL = 60; // 下班前幾分鐘停止掛號
 function spawn(urgent, front, opts){
   if (S.arrived >= MAX_PATIENTS) return;
   if (S.arrived > 0 && S.t >= S.end - LAST_CALL) return;
-  const r = urgent ? RNG.urg : (opts && opts.senior) ? RNG.sen : RNG.pat;
+  const vip = !!(opts && opts.vip);
+  const r = urgent || vip ? RNG.urg : (opts && opts.senior) ? RNG.sen : RNG.pat;
   const sur = SURNAMES[Math.floor(r()*SURNAMES.length)];
   let p, metal = 0;
   if (urgent){
@@ -848,7 +859,7 @@ function spawn(urgent, front, opts){
     }
     const [title, pat, look] = person;
     const acute = r() < (P.acute || 0);
-    p = { name:sur + title, dx:P.dx, part:P.part, look, rx:genRx(P.rx, acute, r), patMax:pat, inflamed:acute }; metal = P.metal;
+    p = { name: vip ? sur + '里長' : sur + title, dx:P.dx, part:P.part, look: vip ? 'grandpa' : look, rx:genRx(P.rx, acute, r), patMax: vip ? 25 : pat, inflamed:acute, vip }; metal = P.metal;
   }
   Object.assign(p, { id:++PID, rem:[...p.rx], done:[], cut:[], patience:100, urgent:!!urgent, svg:avatar(p.look),
     asked:{}, woke:false });
@@ -1298,7 +1309,7 @@ function fireIncident(){
 }
 
 function pickEvent(){
-  const ok = EVENTS.filter(e => (!e.when || e.when()) && !(e.once && S.used.has(e.id)));
+  const ok = EVENTS.filter(e => (!e.when || e.when()) && !(e.once && S.used.has(e.id)) && (!e.chance || RNG.evt() < e.chance));
   const fresh = ok.filter(e => !S.used.has(e.id));
   const pool = fresh.length ? fresh : ok;
   return pool.length ? pool[Math.floor(RNG.evt()*pool.length)] : null;
@@ -1353,6 +1364,7 @@ function applyFx(fx){
   if (fx.rush){ S.rushUntil = S.t + fx.rush; S.nextArr = Math.min(S.nextArr, S.t + 1); }
   if (fx.incident) S.incidents += fx.incident;
   if (fx.urgent) spawn(true, fx.urgent === 'front');
+  if (fx.vip) spawn(false, true, { vip:true });
 }
 
 /* ---------- 結算 ---------- */
@@ -1545,7 +1557,7 @@ function renderSeats(){
       if (el._pid !== p.id){
         el._av.innerHTML = p.svg; el._sn.textContent = p.name;
         el._ring.querySelector('em')?.remove();
-        if (p.urgent){ const e = document.createElement('em'); e.textContent = '加開'; el._ring.appendChild(e); }
+        if (p.urgent || p.vip){ const e = document.createElement('em'); e.textContent = p.urgent ? '加開' : '插隊'; el._ring.appendChild(e); }
       }
       el._key = key; el._pid = p.id;
       el._dots.innerHTML = p.rem.map(m => m === 'pack' ? '<i class="pk2"></i>' : `<i style="--c:${MODS[m].color}"></i>`).join('');
