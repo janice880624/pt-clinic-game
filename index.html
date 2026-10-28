@@ -433,8 +433,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       <div class="actions">
         <button class="act" id="waterBtn" type="button"><b>喝水</b><small>1 分・會想上廁所</small></button>
         <button class="act" id="toiletBtn" type="button"><b>上廁所</b><small>3 分・膀胱清空</small></button>
-        <button class="act" id="coffeeBtn" type="button"><b>喝咖啡</b><small id="coffeeLab">剩 2 杯・體力 +30</small></button>
-        <button class="act" id="snackBtn" type="button"><b>吃零食</b><small id="snackLab">剩 3 包・體力 +20</small></button>
+        <button class="act" id="coffeeBtn" type="button"><b>喝咖啡</b><small id="coffeeLab">1 分・體力 +30</small></button>
+        <button class="act" id="snackBtn" type="button"><b>吃零食</b><small id="snackLab">1.5 分・體力 +20</small></button>
       </div>
       <div class="ticker" id="ticker">準備開診。</div>
     </aside>
@@ -789,7 +789,7 @@ function newGame(key, code){
   const sh = SHIFTS[key];
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null,
-    stamina:100, coffee:COFFEE_MAX, snacks:SNACK_MAX, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
+    stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
     nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
@@ -1162,12 +1162,10 @@ function step(g){
   if (S.stamina <= 0 && !S.lock && !modal){
     // 體力歸零：走不動，強制坐下來吃東西
     S.collapse = (S.collapse || 0) + 1; S.score -= 15;
-    const food = S.snacks > 0 ? 'snack' : S.coffee > 0 ? 'coffee' : 'rest';
-    showAlert('走不動了', food === 'rest' ? '體力歸零，零食和咖啡都沒了，只能坐著休息 4 分鐘' : `體力歸零，只好坐下來${food === 'snack' ? '吃零食' : '喝咖啡'}，3 分鐘不能動`, '體力透支');
+    showAlert('走不動了', '體力歸零，只好坐下來吃東西，3 分鐘不能動', '體力透支');
     msg('體力透支！走不動了，-15 分。', 'bad');
-    setLock('累到走不動，坐下來補充體力', food === 'rest' ? 4 : 3, () => {
-      if (food === 'snack') S.snacks--; else if (food === 'coffee') S.coffee--;
-      S.stamina = food === 'rest' ? 25 : 40;
+    setLock('累到走不動，坐下來補充體力', 3, () => {
+      S.stamina = 40;
       msg('終於緩過來了，回去看病人。', 'good');
     }, true);
   }
@@ -1613,10 +1611,8 @@ function render(){
   else setText($('lockLab'), S.stamina < 50 ? '空檔中・體力不足，動作變慢' : '空檔中，可以安排病人');
   meter('mBlad','bBlad', S.bladder);
   $('toiletBtn').setAttribute('aria-disabled', String(!!L));
-  setText($('coffeeLab'), S.coffee ? `剩 ${S.coffee} 杯・體力 +30` : '今天喝完了');
-  setText($('snackLab'), S.snacks ? `剩 ${S.snacks} 包・體力 +20` : '零食吃光了');
-  $('coffeeBtn').setAttribute('aria-disabled', String(!!L || !S.coffee));
-  $('snackBtn').setAttribute('aria-disabled', String(!!L || !S.snacks));
+  $('coffeeBtn').setAttribute('aria-disabled', String(!!L));
+  $('snackBtn').setAttribute('aria-disabled', String(!!L));
   renderLaundry();
   $('waterBtn').setAttribute('aria-disabled', String(!!L));
   const inc = [];
@@ -1729,25 +1725,21 @@ $('room').addEventListener('click', e => {
   if (t.id === 'lFold') doFold(); else doWash();
 });
 const WASH_MIN = 15; // 洗衣機一輪幾分鐘
-// 補體力：咖啡、零食（每診有限量）
+// 補體力：咖啡、零食（不限量，但咖啡會想上廁所、零食會口渴）
 const PINE_EVENT = { who:'櫃台小姐', say:'「家屬送了一盒鳳梨酥耶！大家快來吃～」', choices:[
   { t:'吃一塊鳳梨酥（體力 +30）', fx:{ stamina:30, throat:10, rush:20 }, fb:'好吃！……可是候診區好像開始旺來了。' },
   { t:'婉拒，改吃自己帶的餅乾（體力 +20）', fx:{ stamina:20, throat:15 }, fb:'上班不吃鳳梨，復健科也一樣。', good:true },
 ]};
-const COFFEE_MAX = 2, SNACK_MAX = 3;
 $('coffeeBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
-  if (!S.coffee) return msg('今天的咖啡額度用完了，再喝會心悸。');
   setLock('去茶水間沖咖啡', 1, () => {
-    S.coffee--; S.stamina = clamp(S.stamina + 30, 0, 100); S.bladder = clamp(S.bladder + 20, 0, 100);
+    S.stamina = clamp(S.stamina + 30, 0, 100); S.bladder = clamp(S.bladder + 20, 0, 100);
     msg('咖啡下肚，精神來了！不過等等會想上廁所。', 'good');
   });
 });
 $('snackBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
-  if (!S.snacks) return msg('零食櫃已經空了。');
   setLock('躲在櫃台後面吃零食', 1.5, () => {
-    S.snacks--;
     if (RNG.play() < 0.3) return openEvent(PINE_EVENT, {});
     S.stamina = clamp(S.stamina + 20, 0, 100); S.throat = clamp(S.throat + 15, 0, 100);
     msg('吃了幾片餅乾，體力回來一點，但嘴巴有點乾。', 'good');
