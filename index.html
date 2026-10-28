@@ -587,6 +587,10 @@ const PARTS = [
   { part:'踝', dx:'腳踝痛', people:[['同學',40,'student'],['小姐',40,'woman']], rx:{estim:.7,laser:.6,heat:.15,us:.18,ex:.07}, acute:.8, acuteDx:'急性腳踝扭傷', metal:.05, w:{am:0,pm:1,eve:3} },
   { part:'肘', dx:'手肘痛',   people:[['師傅',35,'man'],['叔叔',40,'grandpa']], rx:{heat:.2,estim:.6,laser:.65,us:.22,ex:.07}, acute:.15, acuteDx:'手肘急性拉傷', metal:.03, w:{am:1,pm:2,eve:2} },
   { part:'腕', dx:'手腕痛',   people:[['媽媽',40,'woman'],['小姐',35,'woman']], rx:{heat:.25,estim:.5,laser:.65,us:.2,ex:.07}, acute:.15, acuteDx:'手腕扭傷', metal:.03, w:{am:1,pm:2,eve:1} },
+  // 新增病況
+  { part:'足', dx:'腳底痛',     people:[['小姐',40,'woman'],['大哥',40,'man'],['跑者',40,'athlete']], rx:{heat:.35,estim:.5,laser:.6,us:.25,ex:.1}, acute:.1, metal:.02, w:{am:1,pm:2,eve:2} },
+  { part:'腿', dx:'大腿拉傷',   people:[['同學',35,'athlete'],['教練',40,'athlete']], rx:{heat:.2,estim:.6,laser:.6,us:.2,ex:.15}, acute:.6, metal:.02, w:{am:0,pm:1,eve:3} },
+  { part:'偏', dx:'中風後肩膀痛', people:[['阿公',70,'grandpa'],['阿嬤',70,'granny']], rx:{heat:.6,estim:.7,laser:.2,ex:.35}, acute:0, metal:.1, wheel:true, w:{am:2,pm:1,eve:0} },
 ];
 const URGENT = { part:'頸', dx:'落枕', title:'先生', look:'man', pat:30, rx:['pack','estim','laser'] };
 // 症狀描述：有紅腫熱痛 → 該冰敷；慢性痠痛 → 該熱敷
@@ -721,6 +725,45 @@ const INCIDENTS = [
 ];
 
 // 上機前的禁忌症確認（電療、短波）
+// ===== 多元病人 =====
+const LANGS = {
+  en: { tag:'EN', note:'只會說英文', who:'交換學生', say:'"Hi! I hurt it playing basketball… Is this the electric thing? Will it hurt?"', names:['Emma','Jake','Liam','Olivia','Noah'] },
+  ja: { tag:'JP', note:'只會說日文', who:'日本觀光客', say:'「すみません…ちょっとひねってしまって…中国語はわかりません。」', names:['佐藤','鈴木','高橋'] },
+  vi: { tag:'VN', note:'中文一點點', who:'越南籍新住民', say:'「Xin chào…我中文，一點點……這個，會痛嗎？」', names:['阮','黎','范'] },
+  id: { tag:'ID', note:'看護陪同', who:'印尼籍看護', say:'「阿嬤說她怕電……我中文不太好，可以慢慢講嗎？」' },
+  tw: { tag:'台語', note:'只聽得懂台語', who:'只講台語的阿公阿嬤', say:'「少年耶，你講啥我攏聽無啦，講台語啦！」' },
+};
+function applyTraits(p, r5, r6, r7){
+  const elder = p.look === 'granny' || p.look === 'grandpa';
+  if (r5 < 0.12){
+    if (elder) p.lang = r6 < 0.6 ? 'tw' : 'id';
+    else {
+      p.lang = ['en','ja','vi'][Math.floor(r6 * 3)];
+      const L = LANGS[p.lang], nm = L.names[Math.floor(r7 * L.names.length)];
+      if (p.lang === 'en'){ p.name = nm; p.look = 'foreigner'; }
+      else p.name = nm + (p.title === '小姐' || p.title === '媽媽' ? '小姐' : p.title === '同學' ? '同學' : '先生');
+    }
+    p.note = LANGS[p.lang].note;
+  } else if (p.look === 'woman' && r6 < 0.2 && (p.part === '腰' || p.part === '足' || p.part === '腕')){
+    p.preg = true; p.note = '懷孕中';
+  }
+  if (p.wheel) p.note = (p.note ? p.note + '・' : '') + '坐輪椅';
+  p.svg = avatar(p.look);
+}
+// 語言溝通：開始第一項治療前
+function langEvent(p){
+  const L = LANGS[p.lang], tw = p.lang === 'tw';
+  return { who:L.who, say:L.say, choices:[
+    { t: tw ? '用台語慢慢跟他說明' : '打開手機翻譯，慢慢說明再開始', fx:{score:8,throat:5}, fb:'多花一點時間，但病人知道要做什麼，也比較安心。', good:true,
+      run:c => { startMod(c.st, c.p); if (S.lock && c.st.p === c.p && c.st.on){ S.lock.end += 1.2; c.st.start += 1.2; S.lock.label = `跟${c.p.name}說明治療（${tw ? '台語' : '翻譯 App'}）`; } } },
+    { t: tw ? '請會講台語的櫃台來幫忙' : '請櫃台或陪同的人幫忙翻譯', fx:{score:4,patience:-5}, fb:'有人幫忙翻譯，不過候診區的人又多等了一下。', run:c => startMod(c.st, c.p) },
+    { t:'比手畫腳，直接開始', fx:{score:-10}, fb:'病人一臉疑惑，治療一開始就嚇一跳……說明還是很重要。', run:c => startMod(c.st, c.p) },
+  ]};
+}
+const PREG_EVENT = { who:'準備上機', say:'「那個……我懷孕五個月了，這樣做可以嗎？」', choices:[
+  { t:'「應該沒關係，避開肚子就好」', fx:{score:-25,incident:1}, fb:'懷孕時電療、短波、腰椎牽引都要避免或特別評估，不能自行判斷。', run:c => beginMod(c.st, c.p) },
+  { t:'先不做這項，回報醫師調整處方', fx:{score:15}, fb:'正確。懷孕要先告知醫師，處方由醫師調整。', good:true, run:c => cutMod(c.st, c.p) },
+]};
 const PM_EVENT = { who:'準備上機', say:'「欸，我有裝心臟節律器喔，這樣可以做嗎？」', choices:[
   { t:'「沒關係啦，離遠一點就好」', fx:{score:-30,incident:1}, fb:'心律調節器是電療、短波的禁忌或需特別評估的情況，不能自行判斷。', run:c=>beginMod(c.st,c.p) },
   { t:'先不做這項，回報醫師調整處方', fx:{score:15}, fb:'正確。先確認禁忌症，處方調整由醫師決定。', good:true, run:c=>cutMod(c.st,c.p) },
@@ -745,6 +788,8 @@ const LOOKS = {
   man:     { hair:'#2F2622', style:'short',  shirt:'#4F6D8F' },
   woman:   { hair:'#3A2B24', style:'long',   shirt:'#D19A4C' },
   student: { hair:'#241D1A', style:'fringe', shirt:'#3E8E8A' },
+  athlete: { hair:'#2B211C', style:'band',   shirt:'#D2462F' },
+  foreigner:{ hair:'#D9B25F', style:'short',  shirt:'#5C7FA8' },
 };
 function avatar(look){
   const L = LOOKS[look] || LOOKS.man, h = L.hair;
@@ -755,6 +800,7 @@ function avatar(look){
     case 'curly': front = [12,16,20,24,28].map((x,i) => `<circle cx="${x}" cy="${i%2 ? 12 : 14}" r="4" fill="${h}"/>`).join(''); break;
     case 'short': front = `<path d="M9.5 20 C9 10 31 10 30.5 20 C28.5 15.5 24 15 20 15 C15 15 11.5 16 9.5 20Z" fill="${h}"/>`; break;
     case 'long': back = `<path d="M8.5 35 C7 19 10 10 20 10 C30 10 33 19 31.5 35Z" fill="${h}"/>`; front = `<path d="M10 19.5 C11 12 29 12 30 19.5 C25 14.5 15 14.5 10 19.5Z" fill="${h}"/>`; break;
+    case 'band': front = `<path d="M9.5 20 C9 10 31 10 30.5 20 C28.5 15.5 24 15 20 15 C15 15 11.5 16 9.5 20Z" fill="${h}"/><rect x="9.3" y="15.6" width="21.4" height="3.2" rx="1.6" fill="#F2EEE3"/>`; break;
     case 'fringe': front = `<path d="M9.5 21 C9 10 31 10 30.5 21 C29 17.5 26 17.5 24 15.5 C22 17.5 15 18.5 9.5 21Z" fill="${h}"/>`; break;
   }
   const g = L.glasses ? `<g fill="none" stroke="#2A2A2A" stroke-width="1"><circle cx="16.3" cy="22.5" r="2.6"/><circle cx="23.7" cy="22.5" r="2.6"/><path d="M18.9 22.5h2.2"/></g>` : '';
@@ -764,7 +810,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v6'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v7'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -859,7 +905,7 @@ function spawn(urgent, front, opts){
     }
     const [title, pat, look] = person;
     const acute = r() < (P.acute || 0);
-    p = { name: vip ? sur + '里長' : sur + title, dx:P.dx, part:P.part, look: vip ? 'grandpa' : look, rx:genRx(P.rx, acute, r), patMax: vip ? 25 : pat, inflamed:acute, vip }; metal = P.metal;
+    p = { name: vip ? sur + '里長' : sur + title, title, dx:P.dx, part:P.part, look: vip ? 'grandpa' : look, rx:genRx(P.rx, acute, r), patMax: vip ? 25 : pat, inflamed:acute, vip, wheel:!!P.wheel }; metal = P.metal;
   }
   Object.assign(p, { id:++PID, rem:[...p.rx], done:[], cut:[], patience:100, urgent:!!urgent, svg:avatar(p.look),
     asked:{}, woke:false });
@@ -869,6 +915,10 @@ function spawn(urgent, front, opts){
   p.metal = !urgent && p.rx.includes('sw') && r2 < metal;
   p.sleepy = !urgent && !p.inflamed && p.rx.includes('pack') && r3 < 0.15;
   p.sym = (p.inflamed ? SYM_HOT : SYM_COLD)[Math.floor(r4*4)];
+  // 多元病人：外籍／只講台語、懷孕、坐輪椅（固定再抽 3 次亂數）
+  const r5 = r(), r6 = r(), r7 = r();
+  if (!urgent && !p.vip) applyTraits(p, r5, r6, r7);
+  p.tag = p.urgent ? '加開' : p.vip ? '插隊' : p.lang ? LANGS[p.lang].tag : p.wheel ? '輪椅' : p.preg ? '孕' : '';
   S.arrived++; p.no = ++S.ticket; p.arriving = true; p.atBed = null; p.walkInUntil = 0;
   front ? S.queue.unshift(p) : S.queue.push(p);
 }
@@ -1049,6 +1099,8 @@ function callNumber(p, st){
 }
 function startMod(st, p){
   st.p = p; st.on = false; st.doneAt = null; st.ot = false;
+  if (p.lang && !p.asked.lang){ p.asked.lang = true; openEvent(langEvent(p), {st,p}); return; }
+  if ((st.m === 'estim' || st.m === 'sw' || st.m === 'tracL') && p.preg && !p.asked.preg){ p.asked.preg = true; openEvent(PREG_EVENT, {st,p}); return; }
   if (st.m === 'sw' && p.metal && !p.asked.metal){ p.asked.metal = true; openEvent(METAL_EVENT, {st,p}); return; }
   if ((st.m === 'estim' || st.m === 'sw') && p.pm && !p.asked.pm){ p.asked.pm = true; openEvent(PM_EVENT, {st,p}); return; }
   beginMod(st, p);
@@ -1063,7 +1115,8 @@ function beginMod(st, p){
     S.back = clamp(S.back + MODS[st.m].back, 0, 100);
     return;
   }
-  const M = MODS[st.m], setup = M.setup * effMult();
+  const M = MODS[st.m], setup = M.setup * effMult() * (p.wheel ? 1.8 : 1);
+  if (p.wheel) S.back = clamp(S.back + 2, 0, 100);
   st.p = p; st.on = true; st.start = S.t + setup; st.dur = M.dur; st.doneAt = null; st.ot = false;
   S.back = clamp(S.back + M.back, 0, 100);
   if (st.m === 'ice'){ S.iceUsing++; const r = iceReady(); if (r === 1) msg('冰袋只剩 1 個了，用過的還在冷凍庫冷卻。', 'bad'); else if (r === 0) msg('冰袋都用完了！要等冷凍庫的冰袋冷卻好。', 'bad'); }
@@ -1557,7 +1610,7 @@ function renderSeats(){
       if (el._pid !== p.id){
         el._av.innerHTML = p.svg; el._sn.textContent = p.name;
         el._ring.querySelector('em')?.remove();
-        if (p.urgent || p.vip){ const e = document.createElement('em'); e.textContent = p.urgent ? '加開' : '插隊'; el._ring.appendChild(e); }
+        if (p.tag){ const e = document.createElement('em'); e.textContent = p.tag; el._ring.appendChild(e); }
       }
       el._key = key; el._pid = p.id;
       el._dots.innerHTML = p.rem.map(m => m === 'pack' ? '<i class="pk2"></i>' : `<i style="--c:${MODS[m].color}"></i>`).join('');
@@ -1600,7 +1653,7 @@ function renderCard(){
   card.innerHTML = `<span class="av">${p.svg}</span><span class="nm"></span><span class="sym"></span><span class="rx">${chips}${canSwapUs(p) && !st ? '<button type="button" class="swapbtn" id="swapUs">超音波改雷射</button>' : ''}</span>`;
   const sy = card.querySelector('.sym'); sy.innerHTML = '<b>症狀</b> '; sy.append(p.sym);
   const nm = card.querySelector('.nm'); nm.textContent = p.name;
-  const sm = document.createElement('small'); sm.textContent = `${p.no} 號・${p.dx}・${where}`; nm.appendChild(sm);
+  const sm = document.createElement('small'); sm.textContent = `${p.no} 號・${p.dx}${p.note ? '・' + p.note : ''}・${where}`; nm.appendChild(sm);
 }
 
 function meter(id, bar, v, invert){
@@ -1964,6 +2017,3 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { tr
 newGame('am'); render(); S.over = true; $('startOv').hidden = false;
 requestAnimationFrame(frame);
 </script>
-
-</body>
-</html>
