@@ -433,7 +433,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       <div class="actions">
         <button class="act" id="waterBtn" type="button"><b>喝水</b><small>1 分・會想上廁所</small></button>
         <button class="act" id="toiletBtn" type="button"><b>上廁所</b><small>3 分・膀胱清空</small></button>
-        <button class="act" id="coffeeBtn" type="button"><b>喝咖啡</b><small id="coffeeLab">1 分・體力 +30</small></button>
+        <button class="act" id="coffeeBtn" type="button"><b>喝咖啡</b><small id="coffeeLab">1 分・體力 +30・解渴</small></button>
         <button class="act" id="snackBtn" type="button"><b>吃零食</b><small id="snackLab">1.5 分・體力 +20</small></button>
       </div>
       <div class="ticker" id="ticker">準備開診。</div>
@@ -1809,8 +1809,8 @@ const PINE_EVENT = { who:'櫃台小姐', say:'「家屬送了一盒鳳梨酥耶�
 $('coffeeBtn').addEventListener('click', () => {
   if (!S || S.over) return; if (S.lock) return busy();
   setLock('去茶水間沖咖啡', 1, () => {
-    S.stamina = clamp(S.stamina + 30, 0, 100); S.bladder = clamp(S.bladder + 20, 0, 100);
-    msg('咖啡下肚，精神來了！不過等等會想上廁所。', 'good');
+    S.stamina = clamp(S.stamina + 30, 0, 100); S.bladder = clamp(S.bladder + 40, 0, 100); S.throat = 0;
+    msg('咖啡下肚，精神來了，也不渴了！不過等等很快會想上廁所。', 'good');
   });
 });
 $('snackBtn').addEventListener('click', () => {
