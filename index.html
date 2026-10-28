@@ -190,6 +190,16 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .laundry.short .lwarn{display:block}
 .laundry.short .towels b{color:var(--bad)}
 @keyframes spin{to{transform:rotate(360deg)}}
+.busyov{position:absolute;left:50%;top:50%;z-index:30;transform:translate(-50%,-50%);width:330px;box-sizing:border-box;padding:14px 18px 16px;border-radius:14px;
+  background:color-mix(in srgb,var(--ink) 88%,transparent);color:var(--bg);text-align:center;pointer-events:none;box-shadow:0 10px 30px rgb(0 0 0 / .25)}
+.busyov small{display:block;font-size:11px;letter-spacing:.14em;opacity:.75;font-weight:700}
+.busyov b{display:block;font-size:17px;line-height:1.35;margin:4px 0 10px}
+.busyov .bt{height:6px;border-radius:999px;background:color-mix(in srgb,var(--bg) 25%,transparent);overflow:hidden}
+.busyov .bt i{display:block;height:100%;width:0;background:var(--bg);border-radius:999px}
+.busyov em{display:block;font-style:normal;font-size:11px;opacity:.8;margin-top:6px}
+.busyov.shake{animation:bshake .35s}
+@keyframes bshake{20%,60%{transform:translate(calc(-50% - 6px),-50%)}40%,80%{transform:translate(calc(-50% + 6px),-50%)}}
+@media (prefers-reduced-motion:reduce){.busyov.shake{animation:none}}
 @keyframes wobble{from{transform:translateX(-.6px)}to{transform:translateX(.6px)}}
 @media (prefers-reduced-motion:reduce){.washer.on,.washer.on .wm-door,.laundry.short{animation:none}}
 @keyframes urgent{from{box-shadow:0 0 0 0 transparent}to{box-shadow:0 0 0 5px color-mix(in srgb,var(--bad) 45%,transparent)}}
@@ -445,6 +455,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   </div>
 
   <div class="walkers" id="walkers"></div>
+  <div class="busyov" id="busyOv" hidden aria-live="polite"><small>忙碌中・請稍候</small><b id="busyLab"></b><div class="bt"><i id="busyBar"></i></div><em id="busyLeft"></em></div>
   <div class="picker" id="picker" hidden><div class="ph"><b id="pkName"></b><i id="pkSym"></i>下一個去哪？</div><div class="pk" id="pkOpts"></div></div>
 
   <div class="ov" id="startOv">
@@ -1725,6 +1736,10 @@ function render(){
   const L = S.lock, lk = $('lock');
   const lc = 'lock' + (L ? ' on' : '');
   if (lk.className !== lc) lk.className = lc;
+  { const o = $('busyOv'), show = !!L && !modal && !S.over && !S.paused;
+    if (o.hidden === show) o.hidden = !show;
+    if (show){ setText($('busyLab'), L.label); $('busyBar').style.width = (clamp((S.t - L.start)/(L.end - L.start), 0, 1)*100) + '%';
+      setText($('busyLeft'), `還要約 ${Math.max(1, Math.ceil((L.end - S.t) * SPEEDS[speedIdx].sec))} 秒，做完才能點別的`); } }
   if (L){ setText($('lockLab'), `忙碌中：${L.label}`); $('lockBar').style.width = (clamp((S.t - L.start)/(L.end - L.start), 0, 1)*100) + '%'; }
   else if (S.coach && S.coach.p){
     if (lk.className !== 'lock on') lk.className = 'lock on';
@@ -1756,7 +1771,7 @@ function msg(text, tone){
   t.textContent = text; t.className = 'ticker ' + (tone || '');
   void t.offsetWidth; t.classList.add('flash');
 }
-function busy(){ msg(`你正在${S.lock.label}，分身乏術！`, 'bad'); }
+function busy(){ msg(`你正在${S.lock.label}，分身乏術！`, 'bad'); const o = $('busyOv'); o.classList.remove('shake'); void o.offsetWidth; o.classList.add('shake'); }
 
 /* ================= 操作 ================= */
 $('room').addEventListener('click', e => {
