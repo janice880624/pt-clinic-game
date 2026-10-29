@@ -484,8 +484,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
           <li><b>牽引</b>：要先熱敷，熱敷完馬上牽引，中間不能插別的項目；做過熱敷不做短波。</li>
           <li><b>機器嗶嗶</b>就點一下，決定下一站或先回候診區。冰敷、熱敷超時會受傷。</li>
           <li><b>超音波、徒手</b>（各 5 分鐘）要你親自做，離開就暫停，點床位回來繼續。</li>
-          <li><b>實習生</b>：每診可以叫 2 次，每次幫忙 30 秒，自動收掉做完的機器。</li>
-          <li><b>下班時間</b>：最後 1 小時停止掛號。時間到還沒做完，接班治療師會來幫忙，之後完成的分數只算一半；最多加班 30 分鐘，剩下的每項扣 10 分。</li>
+          <li><b>實習生</b>：每診可以叫 2 次，每次幫忙 15 分鐘：下機器、補熱敷箱、洗毛巾、折毛巾。</li>
+          <li><b>下班時間</b>：最後 1 小時停止掛號。時間到還沒做完要加班，之後完成的分數只算一半。早、午診有接班治療師幫忙，晚診沒有；最多加班 30 分鐘，剩下的每項扣 10 分。</li>
           <li><b>顧好自己</b>：體力會一直掉，喝咖啡、吃零食補體力；太渴、太急都會出事。</li>
         </ol>
       </div>
@@ -844,7 +844,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v10'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v11'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -880,7 +880,7 @@ function newGame(key, code){
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null, iceUsing:0, iceCooling:[],
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
-    nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, internLeft:INTERN_USES, internUntil:0, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
+    nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, internLeft:INTERN_USES, internUntil:0, internNext:0, helper:false, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
   spawn(); spawn(); spawn(); if (key === 'am') spawn();
@@ -1181,8 +1181,17 @@ function completeStep(st){
   afterMod(st, p);
 }
 // 實習生：幫忙約 30 秒（真實時間），自動收掉做完的機器；下一站仍由你決定
-const INTERN_USES = 2, INTERN_SEC = 30;
+const INTERN_USES = 2, INTERN_MIN = 15;
+// 幫手的雜事：補熱敷箱、洗毛巾、折毛巾（一次做一件，要花時間）
+function helperChores(who){
+  if (S.t < S.internNext) return;
+  if (S.heatLow){ S.internNext = S.t + 2; S.heatLow = false; msg(`${who}幫熱敷箱補好水、加熱了。`, 'good'); return; }
+  if (S.toFold){ const n = S.toFold; S.internNext = S.t + Math.max(0.6, n * 0.3); S.towels += n; S.toFold = 0; msg(`${who}折好 ${n} 條毛巾，乾淨毛巾有 ${S.towels} 條。`, 'good'); return; }
+  if (S.dirty && !S.washer){ const n = S.dirty; S.internNext = S.t + 0.6; S.washer = { until:S.t + WASH_MIN, n }; S.dirty = 0; msg(`${who}把 ${n} 條髒毛巾丟進洗衣機了。`, 'good'); }
+}
 function internTick(){
+  const who = S.helper ? '接班治療師' : '實習生';
+  helperChores(who);
   S.st.forEach((st, bi) => {
     if (!st.p || !st.on || st.doneAt == null || MODS[st.m].hands || S.t - st.doneAt < 0.3) return;
     const p = st.p;
@@ -1195,13 +1204,13 @@ function internTick(){
     clearSt(st);
     p.patience = Math.max(p.patience, 75);
     S.queue.unshift(p); p.atBed = bi; walkBack(p);
-    msg(`${S.handover ? '接班治療師' : '實習生'}幫 ${p.name} 收好${MODS[st.m].short}，請他回候診區等下一站。`, 'good');
+    msg(`${who}幫 ${p.name} 收好${MODS[st.m].short}，請他回候診區等下一站。`, 'good');
   });
 }
 $('internBtn').addEventListener('click', () => {
-  if (!S || S.over || S.handover || S.internUntil || S.internLeft <= 0) return;
-  S.internLeft--; S.internUntil = S.t + INTERN_SEC / SPEEDS[speedIdx].sec;
-  msg('實習生來幫忙了！接下來 30 秒，做完的機器他會幫你收（下一站還是要你排）。', 'good');
+  if (!S || S.over || S.helper || S.internUntil || S.internLeft <= 0) return;
+  S.internLeft--; S.internUntil = S.t + INTERN_MIN;
+  msg(`實習生來幫忙 ${INTERN_MIN} 分鐘！他會幫你下機器、補熱敷箱、洗毛巾、折毛巾（下一站還是要你排）。`, 'good');
 });
 function clearSt(st){ st.p = null; st.on = false; st.doneAt = null; st.ot = false; st.insp = false; st.walkUntil = 0; st.fault = null; st.faultWarn = false; st.prog = 0; st.warn3 = false; st.pen = 0; if (S.coach === st) S.coach = null; }
 function afterMod(st, p){
@@ -1287,7 +1296,7 @@ function step(g){
   if (S.lock && S.t >= S.lock.end){ const L = S.lock; S.lock = null; L.onDone && L.onDone(); }
   if (S.iceCooling.length && S.t >= S.iceCooling[0]){ const n = S.iceCooling.filter(t => S.t >= t).length; S.iceCooling = S.iceCooling.filter(t => S.t < t); msg(`${n} 個冰袋在冷凍庫冷卻好了，可以再用。`, 'good'); }
   if (S.washer && S.t >= S.washer.until){ S.toFold += S.washer.n; msg(`洗衣機嗶嗶！${S.washer.n} 條毛巾洗好了，記得去折。`, 'good'); S.washer = null; Music.ding(); }
-  if (S.handover) internTick();
+  if (S.helper) internTick();
   else if (S.internUntil){ if (S.t >= S.internUntil){ S.internUntil = 0; msg('實習生去跟別的治療師了。', ''); } else internTick(); }
   S.stamina = clamp(S.stamina - 0.25*g*(S.throat >= 100 ? 2 : 1), 0, 100);
   if (S.stamina < 30 && !S.warned.tired){ S.warned.tired = true; msg('體力快撐不住了，動作會變慢……喝杯咖啡或吃點零食吧！', 'bad'); }
@@ -1392,12 +1401,13 @@ function step(g){
   if (S.t >= S.end){
     if (S.handover) return (idle || S.t >= S.end + HANDOVER_MAX) ? finish('handover') : undefined;
     if (idle) return finish('time');
-    S.handover = true; S.otBase = S.score; S.internUntil = 0;
-    $('alertK').textContent = `${fmt(S.end)} 下班時間到`; $('alertT').textContent = '接班治療師來幫忙了';
-    $('alertD').textContent = `做完的機器他會幫你收。接下來完成的治療分數只算一半，最晚 ${fmt(S.end + HANDOVER_MAX)} 交班`;
+    S.handover = true; S.otBase = S.score; S.helper = S.key !== 'eve'; if (S.helper) S.internUntil = 0;
+    $('alertK').textContent = `${fmt(S.end)} 下班時間到`; $('alertT').textContent = S.helper ? '接班治療師來幫忙了' : '晚診沒有接班，只能自己加班';
+    $('alertD').textContent = S.helper ? `下機器、補熱敷箱、洗毛巾他都會幫忙。接下來完成的治療分數只算一半，最晚 ${fmt(S.end + HANDOVER_MAX)} 交班`
+      : `接下來完成的治療分數只算一半，最晚 ${fmt(S.end + HANDOVER_MAX)} 一定要關門${S.internLeft > 0 ? '。還可以叫實習生幫忙' : ''}`;
     const a = $('alert'); a.hidden = true; void a.offsetWidth; a.hidden = false;
     clearTimeout(alertTimer); alertTimer = setTimeout(() => { a.hidden = true; }, 4200);
-    msg('下班時間到了，接班的治療師來一起收尾。', 'bad'); return;
+    msg(S.helper ? '下班時間到了，接班的治療師來一起收尾。' : '晚診沒有人接班，自己把病人做完再走吧。', 'bad'); return;
   }
   if (S.t >= S.end - LAST_CALL && idle) return finish('early');
 }
@@ -1503,7 +1513,7 @@ function finish(reason){
   const ratio = final / Math.max(1, S.arrived * 65);
   let G = GRADES.find(x => ratio >= x.min);
   if (reason === 'back') G = GRADES[GRADES.length - 1];
-  const kicker = reason === 'back' ? '閃到腰，提早下班' : reason === 'early' ? '病人都清空了，提早收工' : reason === 'handover' ? `加班 ${ot} 分鐘，和接班治療師一起收完` : `${fmt(S.end)} 準時下班`;
+  const kicker = reason === 'back' ? '閃到腰，提早下班' : reason === 'early' ? '病人都清空了，提早收工' : reason === 'handover' ? (S.helper ? `加班 ${ot} 分鐘，和接班治療師一起收完` : `加班 ${ot} 分鐘，自己收完才關門`) : `${fmt(S.end)} 準時下班`;
   $('endKicker').textContent = `${S.sh.name} #${S.code}・${kicker}`;
   const url = `${SHARE_URL}#${S.key}${S.code}`;
   $('shareTxt').value = `我在〈不要說今天很閒〉${S.sh.name} #${S.code} 拿到 ${G.g}（${final} 分），你敢挑戰嗎？\n開始畫面輸入 ${S.code}、選${S.sh.name}，就會遇到一樣的病人\n${url}`;
@@ -1698,8 +1708,8 @@ function renderSeats(){
     el._ring.style.setProperty('--pc', pc > 55 ? 'var(--good)' : pc > 25 ? 'var(--warn)' : 'var(--bad)');
   });
   setText($('qCount'), `${S.queue.length} 人候診`);
-  { const b = $('internBtn'), on = !!S.internUntil, sec = on ? Math.ceil((S.internUntil - S.t) * SPEEDS[speedIdx].sec) : 0;
-    setText(b, S.handover ? '接班治療師幫忙中' : on ? `實習生 ${sec} 秒` : `叫實習生 ×${S.internLeft}`); b.classList.toggle('on', on || !!S.handover); b.disabled = !on && !S.handover && S.internLeft <= 0; }
+  { const b = $('internBtn'), on = !!S.internUntil, left = on ? Math.ceil(S.internUntil - S.t) : 0;
+    setText(b, S.helper ? '接班治療師幫忙中' : on ? `實習生幫忙中・剩 ${left} 分` : `叫實習生 ×${S.internLeft}`); b.classList.toggle('on', on || S.helper); b.disabled = !on && !S.helper && S.internLeft <= 0; }
 }
 
 function renderCard(){
@@ -1741,7 +1751,7 @@ function meter(id, bar, v, invert){
 function render(){
   setText($('clk'), fmt(S.t));
   const lab = $('shiftLab');
-  if (S.handover){ setText(lab, `#${S.code}・加班中・分數減半・${fmt(S.end + HANDOVER_MAX)} 交班`); lab.className = 'ot'; }
+  if (S.handover){ setText(lab, `#${S.code}・加班中・分數減半・${fmt(S.end + HANDOVER_MAX)} ${S.helper ? '交班' : '關門'}`); lab.className = 'ot'; }
   else if (S.t >= S.end - LAST_CALL){ setText(lab, `#${S.code}・停止掛號・${fmt(S.end)} 下班`); lab.className = 'ot'; }
   else { setText(lab, `${S.sh.name} #${S.code}・${fmt(S.end)} 下班` + (S.t < S.rushUntil ? '・病人潮！' : '')); lab.className = S.t < S.rushUntil ? 'ot' : ''; }
   meter('mSta','bSta', S.stamina, true);
