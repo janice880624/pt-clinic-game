@@ -344,6 +344,10 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .lede{margin:0;color:var(--muted)}
 .codebox{display:flex;flex-direction:column;gap:4px;background:var(--panel2);border:1.5px dashed var(--line);border-radius:12px;padding:8px 12px}
 .cb-row{display:flex;align-items:center;gap:8px}
+.mode button{font:inherit;font-size:12px;font-weight:700;padding:2px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
+.mode button.on{border-color:var(--brand);background:var(--brand);color:var(--brand-ink)}
+.mode button.on[data-mode="hell"]{border-color:var(--bad);background:var(--bad)}
+.mode small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .cb-row label{font-weight:700;font-size:13px;white-space:nowrap}
 #codeIn{flex:1;min-width:0;font:inherit;font-family:var(--f-mono);font-size:18px;letter-spacing:.2em;padding:4px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);-webkit-user-select:text;user-select:text}
 #codeIn:focus{outline:2px solid var(--brand);outline-offset:1px}
@@ -474,6 +478,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
             <input id="codeIn" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="留空＝隨機">
             <button class="cb-daily" id="dailyBtn" type="button">今日挑戰</button>
           </div>
+          <div class="cb-row mode" id="modeRow"><label>難度</label><button type="button" data-mode="easy">簡單</button><button type="button" data-mode="hell">地獄 🔥</button><small id="modeHint"></small></div>
           <small id="codeHint">輸入朋友給的 4 位數代碼、選同一個班別，就會遇到一樣的病人。</small>
         </div>
         <div class="shifts" id="shifts"></div>
@@ -484,8 +489,8 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
           <li><b>牽引</b>：要先熱敷，熱敷完馬上牽引，中間不能插別的項目；做過熱敷不做短波。</li>
           <li><b>機器嗶嗶</b>就點一下，決定下一站或先回候診區。冰敷、熱敷超時會受傷。</li>
           <li><b>超音波、徒手</b>（各 5 分鐘）要你親自做，離開就暫停，點床位回來繼續。</li>
-          <li><b>實習生</b>：每診可以叫 2 次，每次幫忙 15 分鐘：下機器、補熱敷箱、洗毛巾、折毛巾。</li>
-          <li><b>下班時間</b>：最後 1 小時停止掛號。時間到還沒做完要加班，之後完成的分數只算一半。早、午診有接班治療師幫忙，晚診沒有；最多加班 30 分鐘，剩下的每項扣 10 分。</li>
+          <li><b>實習生</b>：每診 2 次，每次 15 分鐘，幫忙下機器、補熱敷箱、洗折毛巾。</li>
+          <li><b>下班</b>：最後 1 小時停止掛號；加班完成的分數減半，晚診沒人接班。</li>
           <li><b>顧好自己</b>：體力會一直掉，喝咖啡、吃零食補體力；太渴、太急都會出事。</li>
         </ol>
       </div>
@@ -657,7 +662,7 @@ const EVENTS = [
     { t:'照處方設定，說明有拉到就好，回診時再請醫師評估', fx:{score:10,throat:5}, fb:'重量依醫師處方，治療師依病人反應回報、再評估。', good:true },
   ]},
   // 大人物插隊：拒絕不了，只能選怎麼收拾；不是每局都會遇到
-  { id:'vip', chance:0.45, who:'櫃台小姐（小聲）', say:'「里長伯來了，說他趕時間要先做……主任剛剛打電話交代要給他方便。」', when:() => S.t < S.end - LAST_CALL && S.arrived < MAX_PATIENTS, choices:[
+  { id:'vip', chance:0.45, hellChance:1, who:'櫃台小姐（小聲）', say:'「里長伯來了，說他趕時間要先做……主任剛剛打電話交代要給他方便。」', when:() => S.t < S.end - LAST_CALL && S.arrived < MAX_PATIENTS, choices:[
     { t:'笑著說「好的，這邊請」，直接讓他先做', fx:{vip:1,patience:-12}, fb:'候診的人臉都綠了，但這關你也拒絕不了。' },
     { t:'讓他先做，並跟候診病人道歉說明', fx:{vip:1,throat:8,score:3}, fb:'該插的還是插了，至少大家知道原因，比較不會客訴。', good:true },
     { t:'「不好意思，要照順序喔」', fx:{vip:1,score:-8,patience:-6,throat:6}, fb:'里長直接打電話給主任……最後還是讓他先做了。' },
@@ -844,7 +849,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v11'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v12'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -855,7 +860,7 @@ function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t
 // 每種用途一條獨立的亂數流，玩家操作不同也不會打亂病人名單
 const RNG = { pat:Math.random, sen:Math.random, urg:Math.random, arr:Math.random, evt:Math.random, inc:Math.random, play:Math.random };
 function seedAll(key, code){
-  const base = `${GAME_VER}|${key}|${code}|`;
+  const base = `${GAME_VER}|${key}|${code}|${HELL ? 'hell|' : ''}`;
   for (const k of Object.keys(RNG)) RNG[k] = mulberry32(seedHash(base + k));
 }
 const randomCode = () => String(1000 + Math.floor(Math.random()*9000));
@@ -880,7 +885,7 @@ function newGame(key, code){
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null, iceUsing:0, iceCooling:[],
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
-    nextArr: sh.start + rand(2,4,RNG.arr), nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, internLeft:INTERN_USES, internUntil:0, internNext:0, helper:false, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
+    nextArr: sh.start + rand(2,4,RNG.arr), nextVip: HELL ? sh.start + rand(25,40,RNG.evt) : 1e9, hell:HELL, nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, internLeft:INTERN_USES, internUntil:0, internNext:0, helper:false, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
   spawn(); spawn(); spawn(); if (key === 'am') spawn();
@@ -891,6 +896,7 @@ function newGame(key, code){
 function pick(arr, wf, rng = RNG.pat){ const tot = arr.reduce((s,x) => s + wf(x), 0); let r = rng()*tot; for (const x of arr){ r -= wf(x); if (r < 0) return x; } return arr[0]; }
 // 急性受傷：熱敷改冰敷，不做牽引、短波
 // 處方裡的熱敷改成「冰/熱敷」(pack)，由玩家依症狀判斷；冰熱敷和短波不同時開
+let HELL = false; try { HELL = localStorage.getItem('ptMode') === 'hell'; } catch (e) {}
 function genRx(rx, acute, rng = RNG.pat){
   rx = { ...rx };
   if ('heat' in rx){ rx.pack = rx.heat; delete rx.heat; }
@@ -909,7 +915,22 @@ function genRx(rx, acute, rng = RNG.pat){
   if (got.includes('us') && got.includes('ex')){ const drop = rng() < 0.5 ? 'us' : 'ex'; got = got.filter(m => m !== drop); }
   if (got.includes('us') && got.includes('laser')){ const drop = rng() < 0.5 ? 'us' : 'laser'; got = got.filter(m => m !== drop); }
   for (const m of ['estim', 'laser']){ if (got.length >= 2) break; if (!got.includes(m) && !(m === 'laser' && got.includes('us'))) got.push(m); }
-  while (got.length > 4){
+  if (HELL){
+    // 地獄模式：每人 3～5 項（平均 4 項）
+    const r = rng(), want = r < 0.1 ? 3 : r < 0.6 ? 4 : 5;
+    const cand = [...ent.map(([m]) => m).filter(m => m !== 'ex' && m !== 'us'), 'estim', 'laser', 'pack', ...(!acute && rng() < 0.8 ? ['ex'] : [])];
+    for (const m of cand){
+      if (got.length >= want) break;
+      if (got.includes(m)) continue;
+      if (m === 'sw' && got.includes('pack')) continue;
+      if (m === 'pack' && got.includes('sw')) continue;
+      if ((m === 'us' && (got.includes('ex') || got.includes('laser'))) || ((m === 'ex' || m === 'laser') && got.includes('us'))) continue;
+      if (MODS[m].needHeat && (got.includes('sw') || got.some(x => MODS[x].needHeat))) continue;
+      got.push(m);
+      if (MODS[m].needHeat && !got.includes('pack')) got.push('pack');
+    }
+  }
+  while (got.length > (HELL ? 5 : 4)){
     const removable = got.filter(m => !(hasTrac && (m === 'pack' || MODS[m].needHeat)) && !(acute && m === 'laser'));
     got.splice(got.indexOf(removable[Math.floor(rng()*removable.length)]), 1);
   }
@@ -934,7 +955,7 @@ function spawn(urgent, front, opts){
       PARTS.forEach(X => X.people.forEach(pp => { if (pp[2] === 'granny' || pp[2] === 'grandpa') pool.push([X, pp]); }));
       [P, person] = pool[Math.floor(r()*pool.length)];
     } else {
-      P = pick(PARTS, x => x.w[S.key], r);
+      P = pick(PARTS, x => x.w[S.key] * (S.hell && (x.part === '頸' || x.part === '腰') ? 2 : 1), r);
       person = P.people[Math.floor(r()*P.people.length)];
     }
     const [title, pat, look] = person;
@@ -1391,6 +1412,10 @@ function step(g){
       else if (st.m !== 'heat' && st.m !== 'ice' && ot > 8){ st.ot = true; S.score -= 10; msg(`${st.label} 嗶了好久，${st.p.name} 自己按掉了……`, 'bad'); }
     }
   }
+  if (S.hell && S.t >= S.nextVip && !modal && !S.handover){
+    S.nextVip = S.t + rand(28, 45, RNG.evt);
+    const v = EVENTS.find(e => e.id === 'vip'); if (v.when()) openEvent(v, null);
+  }
   if (S.t >= S.nextEvt && !modal && !S.handover){
     const ev = pickEvent();
     if (ev) openEvent(ev, null); else S.nextEvt = S.t + 10;
@@ -1444,7 +1469,7 @@ function fireIncident(){
 }
 
 function pickEvent(){
-  const ok = EVENTS.filter(e => (!e.when || e.when()) && !(e.once && S.used.has(e.id)) && (!e.chance || RNG.evt() < e.chance));
+  const ok = EVENTS.filter(e => (!e.when || e.when()) && !(e.once && S.used.has(e.id)) && (!e.chance || RNG.evt() < (S.hell && e.hellChance || e.chance)));
   const fresh = ok.filter(e => !S.used.has(e.id));
   const pool = fresh.length ? fresh : ok;
   return pool.length ? pool[Math.floor(RNG.evt()*pool.length)] : null;
@@ -1510,13 +1535,13 @@ function finish(reason){
   const leftPts = [...new Set([...S.queue, ...S.st.filter(s => s.p).map(s => s.p)])];
   const left = leftPts.length, leftItems = leftPts.reduce((n, p) => n + p.rem.length, 0);
   const final = S.score - leftItems * 10;
-  const ratio = final / Math.max(1, S.arrived * 65);
+  const ratio = final / Math.max(1, S.arrived * (S.hell ? 85 : 65));
   let G = GRADES.find(x => ratio >= x.min);
   if (reason === 'back') G = GRADES[GRADES.length - 1];
   const kicker = reason === 'back' ? '閃到腰，提早下班' : reason === 'early' ? '病人都清空了，提早收工' : reason === 'handover' ? (S.helper ? `加班 ${ot} 分鐘，和接班治療師一起收完` : `加班 ${ot} 分鐘，自己收完才關門`) : `${fmt(S.end)} 準時下班`;
-  $('endKicker').textContent = `${S.sh.name} #${S.code}・${kicker}`;
-  const url = `${SHARE_URL}#${S.key}${S.code}`;
-  $('shareTxt').value = `我在〈不要說今天很閒〉${S.sh.name} #${S.code} 拿到 ${G.g}（${final} 分），你敢挑戰嗎？\n開始畫面輸入 ${S.code}、選${S.sh.name}，就會遇到一樣的病人\n${url}`;
+  $('endKicker').textContent = `${S.hell ? '地獄模式・' : ''}${S.sh.name} #${S.code}・${kicker}`;
+  const url = `${SHARE_URL}#${S.key}${S.code}${S.hell ? 'h' : ''}`;
+  $('shareTxt').value = `我在〈不要說今天很閒〉${S.hell ? '地獄模式' : ''}${S.sh.name} #${S.code} 拿到 ${G.g}（${final} 分），你敢挑戰嗎？\n開始畫面${S.hell ? '選地獄模式、' : ''}輸入 ${S.code}、選${S.sh.name}，就會遇到一樣的病人\n${url}`;
   $('shareLab').textContent = `分享這一診的挑戰碼 #${S.code}`;
   $('copyBtn').textContent = '複製挑戰文字';
   $('endCard').style.setProperty('--gc', G.c);
@@ -1753,7 +1778,7 @@ function render(){
   const lab = $('shiftLab');
   if (S.handover){ setText(lab, `#${S.code}・加班中・分數減半・${fmt(S.end + HANDOVER_MAX)} ${S.helper ? '交班' : '關門'}`); lab.className = 'ot'; }
   else if (S.t >= S.end - LAST_CALL){ setText(lab, `#${S.code}・停止掛號・${fmt(S.end)} 下班`); lab.className = 'ot'; }
-  else { setText(lab, `${S.sh.name} #${S.code}・${fmt(S.end)} 下班` + (S.t < S.rushUntil ? '・病人潮！' : '')); lab.className = S.t < S.rushUntil ? 'ot' : ''; }
+  else { setText(lab, `${S.hell ? '地獄・' : ''}${S.sh.name} #${S.code}・${fmt(S.end)} 下班` + (S.t < S.rushUntil ? '・病人潮！' : '')); lab.className = S.t < S.rushUntil ? 'ot' : ''; }
   meter('mSta','bSta', S.stamina, true);
   meter('mBack','bBack', S.back);
   meter('mThr','bThr', S.throat);
@@ -1943,12 +1968,20 @@ $('dailyBtn').addEventListener('click', () => {
   $('codeIn').value = dailyCode();
   const h = $('codeHint'); h.className = 'invite'; h.textContent = `今日挑戰碼 #${$('codeIn').value}：今天每個人玩到的病人都一樣，選一個班別開始吧！`;
 });
-// 從分享連結帶入挑戰碼，例如 #am4821
+// 難度：簡單／地獄
+function setMode(hell){
+  HELL = hell; try { localStorage.setItem('ptMode', hell ? 'hell' : 'easy'); } catch (e) {}
+  document.querySelectorAll('#modeRow button').forEach(b => b.classList.toggle('on', (b.dataset.mode === 'hell') === hell));
+  $('modeHint').textContent = hell ? '每人約 4 項治療，里長常常來插隊' : '每人約 2～3 項治療';
+}
+$('modeRow').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.mode === 'hell'); });
+setMode(HELL);
+// 從分享連結帶入挑戰碼，例如 #am4821（地獄模式 #am4821h）
 (function(){
-  const m = /^#(am|pm|eve)(\d{4})$/.exec(location.hash || '');
+  const m = /^#(am|pm|eve)(\d{4})(h?)$/.exec(location.hash || '');
   if (!m) return;
-  $('codeIn').value = m[2];
-  const h = $('codeHint'); h.className = 'invite'; h.textContent = `朋友邀請你挑戰 ${SHIFTS[m[1]].name} #${m[2]}，選${SHIFTS[m[1]].name}就能開始！`;
+  $('codeIn').value = m[2]; setMode(!!m[3]);
+  const h = $('codeHint'); h.className = 'invite'; h.textContent = `朋友邀請你挑戰${m[3] ? '地獄模式' : ''} ${SHIFTS[m[1]].name} #${m[2]}，選${SHIFTS[m[1]].name}就能開始！`;
   setTimeout(() => { const b = document.querySelector(`.shift[data-k="${m[1]}"]`); if (b) b.classList.add('hl'); }, 0);
 })();
 
