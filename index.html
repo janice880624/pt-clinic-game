@@ -316,6 +316,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .rx i.done,.rx i.cut{color:var(--muted);background:transparent;text-decoration:line-through;font-weight:500}
 .rx i.cut{opacity:.6}
 .rx i.now{color:var(--panel);background:var(--c)}
+.swapbtn.postex{border-color:var(--bad);color:var(--bad)}
 .swapbtn{font-size:11px;font-weight:700;line-height:1.4;padding:0 7px;border-radius:999px;border:1.5px dashed var(--laser);background:var(--panel);color:var(--laser);cursor:pointer}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .act{border:1.5px solid var(--line);background:var(--panel);border-radius:10px;padding:3px 10px;line-height:1.3;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
@@ -599,7 +600,7 @@ const ZONES = [
 
 // 病人：people = [稱呼, 最多等幾分鐘, 頭像造型]；rx = 每項治療開立的機率（保證 2–4 項；有牽引一定有熱敷）
 // metal = 體內有金屬植入物的機率（短波前會被問到）
-const SURNAMES = ['陳','林','黃','張','李','王','吳','劉','蔡','楊','許','鄭','謝','郭'];
+const SURNAMES = [...'李王張劉陳楊黃趙周吳徐孫朱馬胡郭林何高梁鄭羅宋謝唐韓曹許鄧蕭馮曾程蔡彭潘袁于董余蘇葉呂魏蔣田杜丁沈姜范江傅鍾盧汪戴崔任陸廖姚方金邱夏譚韋賈鄒石熊孟秦閻薛侯雷白龍段郝孔邵史毛常萬顧賴武康賀嚴尹錢施牛洪龔'];
 const PARTS = [
   { part:'頸', dx:'脖子痛', people:[['阿伯',60,'grandpa'],['先生',35,'man'],['小姐',40,'woman']], rx:{heat:.5,estim:.6,tracC:.55,laser:.25,sw:.15,us:.08,ex:.07}, acute:.2, acuteDx:'急性落枕', metal:.05, w:{am:3,pm:2,eve:2} },
   { part:'腰', dx:'下背痛',   people:[['先生',35,'man'],['大哥',40,'man'],['阿嬤',60,'granny']], rx:{heat:.5,estim:.6,tracL:.55,laser:.15,sw:.25,us:.08,ex:.1}, acute:.25, acuteDx:'急性腰扭傷', metal:.08, w:{am:2,pm:2,eve:3} },
@@ -662,7 +663,7 @@ const EVENTS = [
     { t:'照處方設定，說明有拉到就好，回診時再請醫師評估', fx:{score:10,throat:5}, fb:'重量依醫師處方，治療師依病人反應回報、再評估。', good:true },
   ]},
   // 大人物插隊：拒絕不了，只能選怎麼收拾；不是每局都會遇到
-  { id:'vip', chance:0.45, hellChance:1, who:'櫃台小姐（小聲）', say:'「里長伯來了，說他趕時間要先做……主任剛剛打電話交代要給他方便。」', when:() => S.t < S.end - LAST_CALL && S.arrived < MAX_PATIENTS, choices:[
+  { id:'vip', once:true, chance:0.45, hellChance:0.7, who:'櫃台小姐（小聲）', say:'「里長伯來了，說他趕時間要先做……主任剛剛打電話交代要給他方便。」', when:() => S.t < S.end - LAST_CALL && S.arrived < MAX_PATIENTS, choices:[
     { t:'笑著說「好的，這邊請」，直接讓他先做', fx:{vip:1,patience:-12}, fb:'候診的人臉都綠了，但這關你也拒絕不了。' },
     { t:'讓他先做，並跟候診病人道歉說明', fx:{vip:1,throat:8,score:3}, fb:'該插的還是插了，至少大家知道原因，比較不會客訴。', good:true },
     { t:'「不好意思，要照順序喔」', fx:{vip:1,score:-8,patience:-6,throat:6}, fb:'里長直接打電話給主任……最後還是讓他先做了。' },
@@ -849,7 +850,7 @@ function avatar(look){
 /* ================= 遊戲邏輯 ================= */
 const $ = id => document.getElementById(id);
 // ===== 挑戰碼：同一組代碼 → 同樣的病人、到診順序與突發狀況 =====
-const GAME_VER = 'v12'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
+const GAME_VER = 'v13'; // 規則或病人設定有改動時要升版，舊代碼才不會被誤認為同一診
 function seedHash(str){
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -885,7 +886,7 @@ function newGame(key, code){
   S = { key, code, sh, t:sh.start, end:sh.start+sh.len, paused:false, over:false,
     st:[], queue:[], sel:null, peek:null, lock:null, arrived:0, ticket:0, toiletRush:0, warned:{}, towels:TOWEL_START, dirty:0, toFold:0, washer:null, iceUsing:0, iceCooling:[],
     stamina:100, back:10, throat:5, bladder:10, score:0, served:0, complaints:0, incidents:0,
-    nextArr: sh.start + rand(2,4,RNG.arr), nextVip: HELL ? sh.start + rand(25,40,RNG.evt) : 1e9, hell:HELL, nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, internLeft:INTERN_USES, internUntil:0, internNext:0, helper:false, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
+    nextArr: sh.start + rand(2,4,RNG.arr), hell:HELL, nextEvt: sh.start + rand(16,28,RNG.evt), nextInc: sh.start + rand(30,45,RNG.inc), nextFault: sh.start + rand(14,22,RNG.play), incUsed:{}, internLeft:INTERN_USES, internUntil:0, internNext:0, helper:false, power:true, powerAt:0, heatLow:false, deskDownUntil:0, deskBacklog:0, inspectUntil:0, inspectHits:0, rushUntil:0, used:new Set(), idn:0 };
   ZONES.forEach(z => { for (let k = 1; k <= z.n; k++) S.st.push({ m:z.m, label:`${z.label} ${k}`, p:null, on:false, start:0, dur:0, doneAt:null, ot:false }); });
   buildRoom();
   spawn(); spawn(); spawn(); if (key === 'am') spawn();
@@ -1284,9 +1285,26 @@ function renderPicker(force){
   $('pkOpts').innerHTML = opts.map(o =>
     `<button type="button" data-m="${o.m}" style="--c:${MODS[o.m].color}" ${o.blocked || !o.n ? 'disabled' : ''}><b>${MODS[o.m].short}</b><small>${o.note}</small></button>`).join('')
     + (canSwapUs(p) ? `<button type="button" class="wait swap" data-m="swap" style="--c:var(--laser)"><b>超音波改雷射</b></button>` : '')
+    + (canPostEx(p) ? `<button type="button" class="wait swap" data-m="postex" style="--c:var(--bad)"><b>徒手下次再約（-${EX_POSTPONE}）</b></button>` : '')
     + `<button type="button" class="wait" data-m="wait"><b>先回候診區等</b></button>`;
 }
 // 超音波來不及：改做雷射（雷射 5 分鐘、不用你在旁邊）
+// 徒手來不及：下次再約（扣分）
+const EX_POSTPONE = 8;
+const canPostEx = p => p.rem.includes('ex');
+function postponeEx(p){
+  if (!canPostEx(p)) return;
+  p.rem = p.rem.filter(m => m !== 'ex'); p.cut.push('ex');
+  S.score -= EX_POSTPONE;
+  if (p.rem.length){ msg(`${p.name} 的徒手改下次再約（-${EX_POSTPONE} 分）。`, 'bad'); return; }
+  const G = geo(), bed = p.atBed, from = bed != null ? [...fromBed(bed, G), ...toLobby(G)] : [seatPt(p)].filter(Boolean);
+  p.atBed = null;
+  S.queue = S.queue.filter(q => q !== p);
+  if (S.sel === p.id) S.sel = null; if (S.peek === p) S.peek = null;
+  walk(p, [...from, doorPt()], { cls:'out', tag:'批價' });
+  S.served++; S.score += 20 + 5*p.done.length;
+  msg(`${p.name} 的徒手改下次再約（-${EX_POSTPONE} 分），先去批價了。`, 'bad');
+}
 const canSwapUs = p => p.rem.includes('us') && !p.rem.includes('laser') && !p.done.includes('laser');
 function swapUs(p){
   if (!canSwapUs(p)) return;
@@ -1301,6 +1319,7 @@ $('pkOpts').addEventListener('click', e => {
   leaveCoach();
   if (m === 'wait'){ S.sel = null; closePicker(); msg(`${p.name} 回候診區等空位。`); return; }
   if (m === 'swap'){ swapUs(p); renderPicker(true); return; }
+  if (m === 'postex'){ postponeEx(p); if (S.queue.includes(p)) renderPicker(true); else { PK = null; $('picker').hidden = true; } return; }
   if (S.lock) return busy();
   const free = S.st.find(s => s.m === m && !s.p && usable(s));
   if (!free) return renderPicker(true);
@@ -1411,10 +1430,6 @@ function step(g){
       else if (st.m === 'ice' && ot > 5){ st.ot = true; st.pen = 0; S.incidents++; S.score -= 20; msg(`${st.label} 凍死了！${st.p.name} 皮膚凍到又紅又麻，-20 分，而且每多 1 分鐘再扣 3 分！`, 'bad'); Music.buzz(true); }
       else if (st.m !== 'heat' && st.m !== 'ice' && ot > 8){ st.ot = true; S.score -= 10; msg(`${st.label} 嗶了好久，${st.p.name} 自己按掉了……`, 'bad'); }
     }
-  }
-  if (S.hell && S.t >= S.nextVip && !modal && !S.handover){
-    S.nextVip = S.t + rand(28, 45, RNG.evt);
-    const v = EVENTS.find(e => e.id === 'vip'); if (v.when()) openEvent(v, null);
   }
   if (S.t >= S.nextEvt && !modal && !S.handover){
     const ev = pickEvent();
@@ -1760,7 +1775,7 @@ function renderCard(){
     const c = p.cut.includes(m) ? 'cut' : p.done.includes(m) ? 'done' : (st && st.m === m) ? 'now' : '';
     return `<i class="${c}" style="--c:${MODS[m].color}">${MODS[m].short}</i>`;
   }).join('');
-  card.innerHTML = `<span class="av">${p.svg}</span><span class="nm"></span><span class="sym"></span><span class="rx">${chips}${canSwapUs(p) && !st ? '<button type="button" class="swapbtn" id="swapUs">超音波改雷射</button>' : ''}</span>`;
+  card.innerHTML = `<span class="av">${p.svg}</span><span class="nm"></span><span class="sym"></span><span class="rx">${chips}${canSwapUs(p) && !st ? '<button type="button" class="swapbtn" id="swapUs">超音波改雷射</button>' : ''}${canPostEx(p) && !st ? `<button type="button" class="swapbtn postex" id="postEx">徒手下次再約 -${EX_POSTPONE}</button>` : ''}</span>`;
   const sy = card.querySelector('.sym'); sy.innerHTML = '<b>症狀</b> '; sy.append(p.sym);
   const nm = card.querySelector('.nm'); nm.textContent = p.name;
   const sm = document.createElement('small'); sm.textContent = `${p.no} 號・${p.dx}${p.note ? '・' + p.note : ''}・${where}`; nm.appendChild(sm);
@@ -1884,9 +1899,10 @@ $('room').addEventListener('click', e => {
   assign(st, fits[0]);
 });
 $('rxcard').addEventListener('click', e => {
-  if (!e.target.closest('#swapUs') || !S || S.over) return;
+  if (!S || S.over) return;
+  const sw = e.target.closest('#swapUs'), px = e.target.closest('#postEx'); if (!sw && !px) return;
   const p = S.queue.find(q => q.id === S.sel) || S.peek;
-  if (p && S.queue.includes(p)) swapUs(p);
+  if (p && S.queue.includes(p)) sw ? swapUs(p) : postponeEx(p);
 });
 $('seats').addEventListener('click', e => {
   const el = e.target.closest('.seat'); if (!el || !el.dataset.id || !S || S.over) return;
