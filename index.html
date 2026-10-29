@@ -1804,7 +1804,7 @@ function render(){
   { const o = $('busyOv'), show = !!L && !modal && !S.over && !S.paused;
     if (o.hidden === show) o.hidden = !show;
     if (show){ setText($('busyLab'), L.label); $('busyBar').style.width = (clamp((S.t - L.start)/(L.end - L.start), 0, 1)*100) + '%';
-      setText($('busyLeft'), `還要約 ${Math.max(1, Math.ceil((L.end - S.t) * SPEEDS[speedIdx].sec))} 秒，做完才能點別的`); } }
+      { const left = L.end - S.t; setText($('busyLeft'), `${left < 1 ? '還要不到 1 分鐘' : `還要約 ${Math.ceil(left)} 分鐘`}，做完才能點別的`); } } }
   if (L){ setText($('lockLab'), `忙碌中：${L.label}`); $('lockBar').style.width = (clamp((S.t - L.start)/(L.end - L.start), 0, 1)*100) + '%'; }
   else if (S.coach && S.coach.p){
     if (lk.className !== 'lock on') lk.className = 'lock on';
