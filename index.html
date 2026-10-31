@@ -408,6 +408,7 @@ button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 @keyframes turn{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
 @media (prefers-reduced-motion:reduce){.unit.done .furn,.unit.done .lamp,.ticker.flash,#rotate .phone{animation:none}.track i{transition:none}}
 </style>
+<script data-goatcounter="https://janice.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
 
@@ -877,6 +878,9 @@ const byOrder = (a,b) => MODS[a].order - MODS[b].order;
 let PID = 0; // 病人編號全域遞增，避免換局後畫面沿用舊病人
 let S = null, unitEls = [], zoneEls = [], modal = null, pendingEv = [], lastShift = 'am';
 
+// 遊玩統計（GoatCounter，只在正式網站有載入時才會送出；不用 cookie）
+function gc(path, title){ try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path, title, event:true }); } catch (e) {} }
+const MODE_NAME = () => HELL ? '地獄' : '簡單';
 function newGame(key, code){
   code = /^\d{4}$/.test(code || '') ? code : randomCode();
   seedAll(key, code);
@@ -1577,6 +1581,7 @@ function finish(reason){
   if (!notes.length) notes.push('病人全部做完，準時打卡。');
   $('endNote').textContent = notes.join(' ');
   $('endOv').hidden = false;
+  gc(`結算/${S.hell ? 'hell' : 'easy'}/${S.key}/${G.g}`, `結算・${S.hell ? '地獄' : '簡單'}・${S.sh.name}・${G.g}`);
 }
 
 /* ================= 畫面 ================= */
@@ -1972,12 +1977,13 @@ $('resumeBtn').addEventListener('click', () => { S.paused = false; $('pauseOv').
 const toMenu = () => { Music.stop(); closePicker(); $('pauseOv').hidden = true; $('endOv').hidden = true; if (S) S.over = true; $('startOv').hidden = false; };
 $('quitBtn').addEventListener('click', toMenu);
 $('menuBtn').addEventListener('click', toMenu);
-$('againBtn').addEventListener('click', () => { newGame(lastShift, S && S.code); Music.start(); });
+$('againBtn').addEventListener('click', () => { newGame(lastShift, S && S.code); Music.start(); gc(`再玩一次/${HELL ? 'hell' : 'easy'}/${lastShift}`, `再玩一次・${MODE_NAME()}・${SHIFTS[lastShift].name}`); });
 const SHARE_URL = 'https://janice880624.github.io/pt-clinic-game/';
 $('copyBtn').addEventListener('click', () => {
   const ta = $('shareTxt'), done = () => { $('copyBtn').textContent = '已複製！'; };
   const fallback = () => { ta.focus(); ta.select(); $('copyBtn').textContent = '已選取，請按複製'; };
   try { navigator.clipboard.writeText(ta.value).then(done, fallback); } catch (e) { fallback(); }
+  gc('分享挑戰碼', '複製挑戰文字');
 });
 $('codeIn').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
 $('dailyBtn').addEventListener('click', () => {
@@ -2006,7 +2012,7 @@ function renderShifts(){
     `<button class="shift" type="button" data-k="${k}"><span class="n">${s.name}</span><span class="tm2">${fmt(s.start)}–${fmt(s.start+s.len)}・約 ${Math.round(s.len*SPEEDS[speedIdx].sec/60)} 分鐘</span><span class="go">開診 ›</span><span class="d">${s.desc}</span></button>`).join('');
 }
 renderShifts();
-$('shifts').addEventListener('click', e => { const b = e.target.closest('.shift'); if (b){ newGame(b.dataset.k, $('codeIn').value.trim()); Music.start(); } });
+$('shifts').addEventListener('click', e => { const b = e.target.closest('.shift'); if (b){ newGame(b.dataset.k, $('codeIn').value.trim()); Music.start(); gc(`開診/${HELL ? 'hell' : 'easy'}/${b.dataset.k}`, `開診・${MODE_NAME()}・${SHIFTS[b.dataset.k].name}`); } });
 $('legend').innerHTML = ZONES.map(z => `<span class="chip" style="--c:${MODS[z.m].color}">${MODS[z.m].short} ×${z.n}</span>`).join('');
 
 /* ---------- 背景音樂（Web Audio 即時合成，原創旋律） ---------- */
